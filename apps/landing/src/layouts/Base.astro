@@ -1,0 +1,153 @@
+---
+interface Props {
+  title: string;
+  description: string;
+}
+const { title, description } = Astro.props;
+const canonical = new URL(Astro.url.pathname, Astro.site);
+---
+
+<!doctype html>
+<html lang="es-PE">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <meta name="theme-color" content="#5B2150" />
+    <!-- Vista previa al compartir el enlace por WhatsApp o Instagram -->
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="es_PE" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,700;12..96,800&family=Bungee&family=Caveat:wght@500;700&display=swap"
+    />
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>
+
+<style is:global>
+  /* Rótulo chicha sobre papel frío: el color fuerte vive solo en el letrero del hero y en la franja final. */
+  :root {
+    --tinta: #1e1a22;
+    --gris: #615a69;
+    --linea: #e3dfe8;
+    --papel: #f6f5f8;
+    --blanco: #ffffff;
+    --ciruela: #5b2150;
+    --ciruela-oscuro: #3f1438;
+    --fucsia: #ff2d87;
+    --amarillo: #ffe14d;
+    --menta: #1f7a55;
+    --menta-claro: #dcf3e8;
+    --rotulo: "Bungee", "Arial Black", Impact, sans-serif;
+    --texto: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+    --mano: "Caveat", "Segoe Print", "Comic Sans MS", cursive;
+    --ancho: 1160px;
+    color-scheme: light;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: var(--papel);
+    color: var(--tinta);
+    font-family: var(--texto);
+    font-size: 1.0625rem;
+    line-height: 1.55;
+    padding-inline: 20px;
+  }
+
+  img,
+  svg {
+    max-width: 100%;
+  }
+
+  a {
+    color: inherit;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--fucsia);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+    margin: 0;
+  }
+
+  p {
+    margin: 0;
+  }
+
+  .wrap {
+    max-width: var(--ancho);
+    margin-inline: auto;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 52px;
+    padding: 0 26px;
+    border-radius: 14px;
+    font-weight: 700;
+    font-size: 1.0625rem;
+    text-decoration: none;
+    transition: transform 0.15s ease, background-color 0.15s ease;
+  }
+
+  .btn:active {
+    transform: translateY(1px);
+  }
+
+  .btn-primario {
+    background: var(--ciruela);
+    color: var(--blanco);
+  }
+
+  .btn-primario:hover {
+    background: var(--ciruela-oscuro);
+  }
+
+  .btn-secundario {
+    border: 2px solid var(--tinta);
+    color: var(--tinta);
+  }
+
+  .btn-secundario:hover {
+    background: var(--blanco);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+</style>

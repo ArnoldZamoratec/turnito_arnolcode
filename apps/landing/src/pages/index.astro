@@ -1,0 +1,696 @@
+---
+import Cuaderno from "../components/Cuaderno.astro";
+import Phone from "../components/Phone.astro";
+import Base from "../layouts/Base.astro";
+
+const APP = import.meta.env.PUBLIC_APP_URL ?? "http://localhost:5173";
+const ejemplo = `${APP}/reservar/barberia-don-lucho`;
+// Número de WhatsApp de soporte (formato 51987654321). Sin número configurado, no se muestra.
+const WHATSAPP: string | undefined = import.meta.env.PUBLIC_WHATSAPP;
+
+const funciones = [
+  {
+    titulo: "Agenda por estilista",
+    texto: "Ves el día de cada uno en columnas. Agendas en dos toques y el sistema no te deja cruzar dos citas.",
+    estado: "Disponible",
+  },
+  {
+    titulo: "Tu enlace de reservas",
+    texto: "Lo pones en tu Instagram y en tu estado de WhatsApp. Tus clientes eligen servicio y hora sin llamarte ni instalar nada.",
+    estado: "Disponible",
+  },
+  {
+    titulo: "Recordatorio por WhatsApp",
+    texto: "Un toque y le llega el mensaje desde tu WhatsApp con la hora y el servicio. Menos clientes que no vienen.",
+    estado: "Disponible",
+  },
+  {
+    titulo: "Ficha de cada cliente",
+    texto: "Historial de cortes, notas y cuántas veces faltó. Lo ves antes de aceptarle otra cita.",
+    estado: "Disponible",
+  },
+  {
+    titulo: "Funciona en tu celular",
+    texto: "Se abre en el navegador y lo agregas a tu pantalla de inicio. Recepción y estilistas ven la misma agenda al momento.",
+    estado: "Disponible",
+  },
+  {
+    titulo: "Recordatorios automáticos",
+    texto: "El día anterior y dos horas antes, con botones para confirmar o cancelar. Si cancela, el espacio se libera solo.",
+    estado: "Muy pronto",
+  },
+  {
+    titulo: "Caja con Yape, Plin y efectivo",
+    texto: "Cobras desde la cita, anotas el número de operación y al final del día la caja cuadra. Funciona aunque se caiga el internet.",
+    estado: "Muy pronto",
+  },
+  {
+    titulo: "Comisiones de tus estilistas",
+    texto: "Porcentaje o monto fijo por servicio. Cada estilista ve lo que lleva ganado en la semana.",
+    estado: "Muy pronto",
+  },
+];
+
+const planes = [
+  {
+    nombre: "Gratis",
+    precio: "0",
+    para: "Para el que trabaja solo",
+    incluye: ["1 estilista", "60 citas al mes", "Enlace de reservas", "Recordatorio por WhatsApp desde tu celular"],
+    cta: "Empezar gratis",
+  },
+  {
+    nombre: "Básico",
+    precio: "39",
+    para: "Para la barbería de 2 o 3 sillas",
+    incluye: ["Hasta 3 estilistas", "Citas ilimitadas", "150 recordatorios automáticos al mes", "Caja y comisiones"],
+    cta: "Probar 30 días gratis",
+    destacado: true,
+  },
+  {
+    nombre: "Pro",
+    precio: "79",
+    para: "Para el salón con más equipo",
+    incluye: ["Estilistas ilimitados", "500 recordatorios automáticos al mes", "Reportes del mes", "Fotos de trabajos en la ficha"],
+    cta: "Probar 30 días gratis",
+  },
+];
+
+const preguntas = [
+  {
+    p: "¿Tengo que instalar algo?",
+    r: "No. Turnito se abre en el navegador del celular, la tablet o la computadora. Si quieres, lo agregas a tu pantalla de inicio y se ve como una app.",
+  },
+  {
+    p: "¿Mis clientes necesitan descargar una app o crear cuenta?",
+    r: "No. Abren tu enlace, eligen servicio y hora, y ponen su nombre y celular. Nada más.",
+  },
+  {
+    p: "¿Y si se va el internet en el local?",
+    r: "La agenda del día queda guardada en tu celular para que la sigas viendo. La caja que funciona sin internet y se sincroniza sola está en camino.",
+  },
+  {
+    p: "¿Cómo pago la suscripción?",
+    r: "Con Yape, Plin, transferencia o tarjeta. Pagas mes a mes o por trimestre, y si te atrasas tienes 7 días antes de que se pause.",
+  },
+  {
+    p: "¿Qué pasa con los datos de mis clientes?",
+    r: "Son tuyos. Cada salón ve solo su información, pedimos el consentimiento que exige la Ley 29733 en cada reserva y puedes exportar o borrar los datos de un cliente cuando te lo pida.",
+  },
+  {
+    p: "¿Puedo dejarlo cuando quiera?",
+    r: "Sí. No hay contrato ni permanencia. Te llevas tu lista de clientes en Excel.",
+  },
+];
+---
+
+<Base
+  title="Turnito · Agenda y reservas por WhatsApp para barberías y peluquerías"
+  description="Deja el cuaderno. Agenda por estilista, enlace de reservas y recordatorios por WhatsApp para tu barbería o peluquería en Perú. Gratis para empezar."
+>
+  <header class="cabecera wrap">
+    <a href="/" class="marca" aria-label="Turnito, inicio">
+      <img src="/icon.svg" alt="" width="34" height="34" />
+      Turnito
+    </a>
+    <nav aria-label="Secciones">
+      <a href="#como-funciona">Cómo funciona</a>
+      <a href="#precios">Precios</a>
+      <a href="#preguntas">Preguntas</a>
+    </nav>
+    <a class="btn btn-primario entrar" href={APP}>Probar gratis</a>
+  </header>
+
+  <main>
+    <section class="hero wrap">
+      <div class="hero-texto">
+        <h1 class="rotulo">
+          <span class="l1">Deja el</span>
+          <span class="l2">cuaderno</span>
+          <span class="l3">y llena tus sillas</span>
+        </h1>
+        <p class="bajada">
+          Agenda por estilista, enlace para que te reserven solos y recordatorios por WhatsApp. Hecho para la barbería y la peluquería de
+          barrio en Perú.
+        </p>
+        <div class="acciones">
+          <a class="btn btn-primario" href={APP}>Crear mi agenda gratis</a>
+          <a class="btn btn-secundario" href={ejemplo}>Ver una reserva de ejemplo</a>
+        </div>
+        <p class="letra-chica">Sin tarjeta. Tu enlace queda listo en 5 minutos.</p>
+      </div>
+      <Phone />
+    </section>
+
+    <section class="cuaderno-vs wrap" aria-labelledby="t-cuaderno">
+      <Cuaderno />
+      <div class="dolores">
+        <h2 id="t-cuaderno">Lo que el cuaderno no te avisa</h2>
+        <dl>
+          <dt>El cliente que no vino</dt>
+          <dd>Le guardaste la silla una hora y no contestó. Con el recordatorio por WhatsApp, avisa antes o confirma.</dd>
+          <dt>Las llamadas en plena chamba</dt>
+          <dd>Dejas la máquina para contestar "¿a qué hora tienes?". Con tu enlace, ellos mismos ven los horarios libres y reservan.</dd>
+          <dt>Dos citas a la misma hora</dt>
+          <dd>Pasa cuando anotan dos personas. En Turnito es imposible: si la hora ya se tomó, te muestra la siguiente libre.</dd>
+          <dt>La caja que no cuadra</dt>
+          <dd>Efectivo, Yape y Plin en un solo cierre del día, con el número de operación de cada pago. Muy pronto.</dd>
+        </dl>
+      </div>
+    </section>
+
+    <section id="como-funciona" class="pasos wrap" aria-labelledby="t-pasos">
+      <h2 id="t-pasos">Empiezas hoy, en tres pasos</h2>
+      <ol>
+        <li>
+          <h3>Crea tu salón</h3>
+          <p>Pones el nombre y eliges barbería, peluquería o uñas. Te dejamos los servicios con precios sugeridos y el horario armado; los cambias cuando quieras.</p>
+        </li>
+        <li>
+          <h3>Comparte tu enlace</h3>
+          <p>Algo como <b>turnito.pe/reservar/tu-barberia</b>. Va en la bio de Instagram, en tu estado de WhatsApp y en un QR en el espejo.</p>
+        </li>
+        <li>
+          <h3>Atiende sin anotar nada</h3>
+          <p>Las reservas caen en tu agenda, le mandas el recordatorio al cliente y marcas cuando llegó o si faltó.</p>
+        </li>
+      </ol>
+    </section>
+
+    <section class="funciones wrap" aria-labelledby="t-funciones">
+      <h2 id="t-funciones">Lo que hace Turnito</h2>
+      <ul>
+        {
+          funciones.map((f) => (
+            <li>
+              <h3>{f.titulo}</h3>
+              <p>{f.texto}</p>
+              <span class:list={["estado", { pronto: f.estado === "Muy pronto" }]}>{f.estado}</span>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <section id="precios" class="precios wrap" aria-labelledby="t-precios">
+      <div class="precios-cab">
+        <h2 id="t-precios">Precio por local, en soles</h2>
+        <p>Sin contrato. Pagas con Yape, Plin o tarjeta. Los precios incluyen IGV.</p>
+      </div>
+      <div class="planes">
+        {
+          planes.map((pl) => (
+            <article class:list={["plan", { destacado: pl.destacado }]}>
+              <h3>{pl.nombre}</h3>
+              <p class="para">{pl.para}</p>
+              <p class="monto">
+                <span class="moneda">S/</span>
+                <span class="cifra">{pl.precio}</span>
+                <span class="periodo">al mes</span>
+              </p>
+              <ul>
+                {pl.incluye.map((i) => (
+                  <li>{i}</li>
+                ))}
+              </ul>
+              <a class:list={["btn", pl.destacado ? "btn-primario" : "btn-secundario"]} href={APP}>
+                {pl.cta}
+              </a>
+            </article>
+          ))
+        }
+      </div>
+    </section>
+
+    <section id="preguntas" class="faq wrap" aria-labelledby="t-faq">
+      <h2 id="t-faq">Preguntas que nos hacen</h2>
+      <div class="lista">
+        {
+          preguntas.map((q) => (
+            <details>
+              <summary>{q.p}</summary>
+              <p>{q.r}</p>
+            </details>
+          ))
+        }
+      </div>
+    </section>
+
+    <section class="cierre" aria-labelledby="t-cierre">
+      <div class="wrap cierre-in">
+        <h2 id="t-cierre" class="rotulo-chico">Tu enlace de reservas, listo hoy</h2>
+        <p>Créalo gratis, compártelo esta tarde y recibe tu primera reserva sin levantar el teléfono.</p>
+        <a class="btn btn-amarillo" href={APP}>Crear mi agenda gratis</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="pie wrap">
+    <span>© 2026 Turnito. Hecho en Lima.</span>
+    {WHATSAPP && <a href={`https://wa.me/${WHATSAPP}`}>¿Dudas? Escríbenos por WhatsApp</a>}
+  </footer>
+</Base>
+
+<style>
+  /* ---------- Cabecera ---------- */
+  .cabecera {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding-block: 18px;
+  }
+
+  .marca {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 800;
+    font-size: 1.35rem;
+    text-decoration: none;
+    letter-spacing: -0.01em;
+  }
+
+  .cabecera nav {
+    display: flex;
+    gap: 22px;
+    margin-left: auto;
+    font-weight: 500;
+  }
+
+  .cabecera nav a {
+    text-decoration: none;
+    color: var(--gris);
+  }
+
+  .cabecera nav a:hover {
+    color: var(--tinta);
+  }
+
+  .entrar {
+    min-height: 44px;
+    padding: 0 18px;
+  }
+
+  /* ---------- Hero: el rótulo ---------- */
+  .hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+    align-items: center;
+    gap: 48px;
+    padding-block: 28px 72px;
+  }
+
+  .rotulo {
+    font-family: var(--rotulo);
+    font-weight: 400;
+    line-height: 0.95;
+    text-transform: uppercase;
+    background: var(--ciruela);
+    color: var(--blanco);
+    padding: 30px 30px 34px;
+    border-radius: 6px;
+    /* doble filete de letrero pintado a mano */
+    box-shadow:
+      inset 0 0 0 6px var(--ciruela),
+      inset 0 0 0 10px var(--amarillo),
+      inset 0 0 0 14px var(--ciruela),
+      inset 0 0 0 17px var(--fucsia);
+    display: grid;
+    gap: 6px;
+  }
+
+  .rotulo span {
+    display: block;
+  }
+
+  .l1 {
+    color: var(--amarillo);
+    font-size: clamp(2.2rem, 5.4vw, 4.2rem);
+  }
+
+  .l2 {
+    color: var(--blanco);
+    font-size: clamp(2.6rem, 7.2vw, 5.6rem);
+    text-shadow: 4px 4px 0 var(--fucsia);
+  }
+
+  .l3 {
+    color: var(--fucsia);
+    font-size: clamp(1.3rem, 3vw, 2.2rem);
+    margin-top: 8px;
+  }
+
+  .bajada {
+    margin-top: 26px;
+    font-size: 1.25rem;
+    max-width: 34ch;
+  }
+
+  .acciones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 26px;
+  }
+
+  .letra-chica {
+    margin-top: 12px;
+    color: var(--gris);
+    font-size: 0.95rem;
+  }
+
+  /* ---------- Cuaderno vs Turnito ---------- */
+  .cuaderno-vs {
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    gap: 64px;
+    align-items: center;
+    padding-block: 64px;
+    border-top: 1px solid var(--linea);
+  }
+
+  h2 {
+    font-size: clamp(1.8rem, 3.6vw, 2.6rem);
+    line-height: 1.1;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+
+  .dolores dl {
+    margin: 26px 0 0;
+    display: grid;
+    gap: 18px;
+  }
+
+  .dolores dt {
+    font-weight: 700;
+    font-size: 1.2rem;
+  }
+
+  .dolores dd {
+    margin: 4px 0 0;
+    color: var(--gris);
+    max-width: 52ch;
+  }
+
+  /* ---------- Pasos (secuencia real) ---------- */
+  .pasos {
+    padding-block: 64px;
+    border-top: 1px solid var(--linea);
+  }
+
+  .pasos ol {
+    list-style: none;
+    counter-reset: paso;
+    margin: 32px 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 32px;
+  }
+
+  .pasos li {
+    counter-increment: paso;
+    display: grid;
+    gap: 8px;
+    align-content: start;
+  }
+
+  .pasos li::before {
+    content: counter(paso);
+    font-family: var(--rotulo);
+    font-size: 2.6rem;
+    line-height: 1;
+    color: var(--ciruela);
+  }
+
+  .pasos h3 {
+    font-size: 1.3rem;
+  }
+
+  .pasos p {
+    color: var(--gris);
+  }
+
+  .pasos b {
+    color: var(--tinta);
+    font-weight: 600;
+  }
+
+  /* ---------- Funciones ---------- */
+  .funciones {
+    padding-block: 64px;
+    border-top: 1px solid var(--linea);
+  }
+
+  .funciones ul {
+    list-style: none;
+    margin: 32px 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 56px;
+  }
+
+  .funciones li {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 4px 16px;
+    padding-block: 20px;
+    border-bottom: 1px solid var(--linea);
+  }
+
+  .funciones h3 {
+    font-size: 1.15rem;
+  }
+
+  .funciones p {
+    grid-column: 1 / -1;
+    color: var(--gris);
+  }
+
+  .estado {
+    grid-row: 1;
+    grid-column: 2;
+    align-self: start;
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 99px;
+    background: var(--menta-claro);
+    color: var(--menta);
+  }
+
+  .estado.pronto {
+    background: #fff6c7;
+    color: #7a5d00;
+  }
+
+  /* ---------- Precios ---------- */
+  .precios {
+    padding-block: 64px;
+    border-top: 1px solid var(--linea);
+  }
+
+  .precios-cab p {
+    margin-top: 10px;
+    color: var(--gris);
+  }
+
+  .planes {
+    margin-top: 32px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px;
+    align-items: stretch;
+  }
+
+  .plan {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 26px;
+    border: 1px solid var(--linea);
+    border-radius: 18px;
+    background: var(--blanco);
+  }
+
+  .plan.destacado {
+    border: 2px solid var(--ciruela);
+  }
+
+  .plan h3 {
+    font-size: 1.3rem;
+  }
+
+  .para {
+    color: var(--gris);
+  }
+
+  .monto {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin-top: 6px;
+  }
+
+  .moneda {
+    font-weight: 700;
+    font-size: 1.3rem;
+  }
+
+  .cifra {
+    font-family: var(--rotulo);
+    font-size: 3.4rem;
+    line-height: 1;
+    color: var(--ciruela);
+  }
+
+  .periodo {
+    color: var(--gris);
+  }
+
+  .plan ul {
+    margin: 8px 0 18px;
+    padding-left: 20px;
+    display: grid;
+    gap: 6px;
+    flex: 1;
+  }
+
+  /* ---------- Preguntas ---------- */
+  .faq {
+    padding-block: 64px;
+    border-top: 1px solid var(--linea);
+    display: grid;
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+    gap: 48px;
+    align-items: start;
+  }
+
+  .faq details {
+    border-bottom: 1px solid var(--linea);
+  }
+
+  .faq summary {
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding-block: 18px;
+    font-weight: 700;
+    font-size: 1.12rem;
+  }
+
+  .faq summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .faq summary::after {
+    content: "+";
+    font-size: 1.5rem;
+    line-height: 1;
+    color: var(--ciruela);
+    transition: transform 0.2s ease;
+  }
+
+  .faq details[open] summary::after {
+    transform: rotate(45deg);
+  }
+
+  .faq details p {
+    padding-bottom: 18px;
+    color: var(--gris);
+    max-width: 60ch;
+  }
+
+  /* ---------- Cierre ---------- */
+  .cierre {
+    margin-inline: -20px;
+    padding: 72px 20px;
+    background: var(--ciruela);
+    color: var(--blanco);
+  }
+
+  .cierre-in {
+    display: grid;
+    justify-items: start;
+    gap: 18px;
+  }
+
+  .rotulo-chico {
+    font-family: var(--rotulo);
+    font-weight: 400;
+    text-transform: uppercase;
+    color: var(--amarillo);
+    font-size: clamp(1.8rem, 4.4vw, 3.2rem);
+    line-height: 1;
+    letter-spacing: 0;
+  }
+
+  .cierre p {
+    font-size: 1.2rem;
+    max-width: 46ch;
+  }
+
+  .btn-amarillo {
+    background: var(--amarillo);
+    color: var(--tinta);
+  }
+
+  .btn-amarillo:hover {
+    background: var(--blanco);
+  }
+
+  .pie {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 12px;
+    padding-block: 28px 40px;
+    color: var(--gris);
+    font-size: 0.95rem;
+  }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 900px) {
+    .hero,
+    .cuaderno-vs,
+    .faq {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .hero {
+      gap: 40px;
+    }
+
+    .cuaderno-vs {
+      gap: 40px;
+    }
+
+    .pasos ol,
+    .planes,
+    .funciones ul {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  @media (max-width: 640px) {
+    .cabecera nav {
+      display: none;
+    }
+
+    .entrar {
+      margin-left: auto;
+    }
+
+    .rotulo {
+      padding: 26px 22px 28px;
+    }
+
+    .acciones .btn {
+      width: 100%;
+    }
+  }
+</style>

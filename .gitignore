@@ -10,3 +10,5 @@ coverage/
 .pg.log
 .api.log
 .web.log
+.landing.log
+apps/landing/.astro/

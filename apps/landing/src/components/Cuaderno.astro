@@ -1,0 +1,97 @@
+---
+// La competencia real: el cuaderno de citas del mostrador.
+---
+
+<figure class="cuaderno" aria-label="Página de un cuaderno de citas con tachones y anotaciones a mano">
+  <p class="fecha">Sábado 17</p>
+  <ol>
+    <li><span>9:30</span> Jorge – corte + barba</li>
+    <li class="tachado"><span>10:00</span> Sra. Rosa – tinte</li>
+    <li class="nota">no vino, no contesta ✗</li>
+    <li><span>11:00</span> el chico de la moto??</li>
+    <li class="doble"><span>11:00</span> Lucía – corte <em>¡¡cruce!!</em></li>
+    <li><span>3 pm</span> Diego (llamar p' confirmar)</li>
+    <li class="borroso"><span>4:30</span> ··· 98··· 3··</li>
+  </ol>
+  <p class="caja">Caja: S/ 210 … ¿o 230?</p>
+</figure>
+
+<style>
+  .cuaderno {
+    position: relative;
+    margin: 0;
+    background:
+      linear-gradient(to right, transparent 46px, #f3a7b5 46px, #f3a7b5 48px, transparent 48px),
+      repeating-linear-gradient(to bottom, transparent 0 33px, #b9cfe6 33px 34px),
+      #fffefa;
+    background-position: 0 0, 0 18px, 0 0;
+    padding: 18px 22px 22px 64px;
+    border-radius: 6px 10px 10px 6px;
+    box-shadow:
+      0 1px 0 #e9e4dc,
+      0 22px 40px -28px rgb(30 26 34 / 0.55);
+    transform: rotate(-1.6deg);
+    font-family: var(--mano);
+    font-size: 1.45rem;
+    line-height: 34px;
+    color: #263a7a;
+    max-width: 440px;
+  }
+
+  .cuaderno::before {
+    /* agujeros del anillado */
+    content: "";
+    position: absolute;
+    left: 14px;
+    top: 26px;
+    bottom: 26px;
+    width: 12px;
+    background: radial-gradient(circle at 6px 6px, var(--papel) 5px, transparent 6px) 0 0 / 12px 68px repeat-y;
+  }
+
+  .fecha {
+    font-weight: 700;
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+  }
+
+  ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  li span {
+    display: inline-block;
+    min-width: 3.4ch;
+    font-weight: 700;
+  }
+
+  .tachado {
+    text-decoration: line-through;
+    text-decoration-color: #c0283a;
+    text-decoration-thickness: 3px;
+  }
+
+  .nota {
+    color: #c0283a;
+    padding-left: 3ch;
+    transform: rotate(-2deg);
+  }
+
+  .doble em {
+    font-style: normal;
+    color: #c0283a;
+    font-weight: 700;
+  }
+
+  .borroso {
+    filter: blur(0.6px);
+    opacity: 0.7;
+  }
+
+  .caja {
+    margin-top: 6px;
+    font-weight: 700;
+  }
+</style>

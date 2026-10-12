@@ -21,6 +21,7 @@ corepack pnpm --filter @salon/db build
 corepack pnpm --filter @salon/api build
 corepack pnpm --filter @salon/api start  # API en :3000
 corepack pnpm --filter @salon/web dev    # Panel en :5173
+corepack pnpm --filter @salon/landing dev  # Landing en :4321
 
 node apps/api/scripts/seed-demo.ts       # salón de demostración con citas
 ```
@@ -41,6 +42,7 @@ corepack pnpm --filter @salon/api test     # disponibilidad + e2e contra Postgre
 ```text
 apps/api        NestJS + Fastify: auth, onboarding, catálogo, clientes, agenda, reserva pública
 apps/web        PWA React + Vite: panel del salón y página de reserva
+apps/landing    Landing estática (Astro): PUBLIC_APP_URL y PUBLIC_WHATSAPP la configuran
 packages/db     migraciones SQL, RLS, withTenant()
 packages/kernel tiempo por zona horaria, dinero en céntimos, UUIDv7, intervalos
 docs/           arquitectura y decisiones

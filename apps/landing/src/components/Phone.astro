@@ -1,0 +1,237 @@
+---
+// Maqueta en HTML de la agenda real del panel + el recordatorio que recibe la clienta.
+const citas = [
+  { hora: "10:00", nombre: "Rosa Q.", servicio: "Perfilado de barba", col: 1, top: 0, alto: 34, estado: "ok" },
+  { hora: "11:30", nombre: "Jorge M.", servicio: "Corte + barba", col: 2, top: 90, alto: 68, estado: "llego" },
+  { hora: "15:00", nombre: "Lucía F.", servicio: "Corte de cabello", col: 1, top: 150, alto: 46, estado: "ok" },
+  { hora: "15:15", nombre: "Diego H.", servicio: "Corte niño", col: 2, top: 186, alto: 46, estado: "web" },
+];
+---
+
+<div class="escena" aria-hidden="true">
+  <div class="telefono">
+    <div class="pantalla">
+      <div class="barra">
+        <strong>Barbería Don Lucho</strong>
+        <span>Sábado 17 de octubre</span>
+      </div>
+      <div class="dias">
+        <span class="activo">Hoy</span><span>Dom 18</span><span>Lun 19</span><span>Mar 20</span>
+      </div>
+      <div class="columnas">
+        <span class="cab"><i style="background:#0E7C66"></i>Kevin</span>
+        <span class="cab"><i style="background:#6366F1"></i>Lucho</span>
+      </div>
+      <div class="grilla">
+        {
+          citas.map((c) => (
+            <div class={`cita ${c.estado}`} style={`grid-column:${c.col}; top:${c.top}px; height:${c.alto}px; left:${c.col === 1 ? "4px" : "calc(50% + 4px)"}`}>
+              <b>{c.hora}</b> {c.nombre}
+              <small>{c.servicio}</small>
+            </div>
+          ))
+        }
+      </div>
+      <div class="total">Previsto del día <b>S/ 165.00</b></div>
+    </div>
+  </div>
+
+  <div class="whatsapp">
+    <span class="de">Barbería Don Lucho</span>
+    Hola Diego 👋 te recordamos tu cita de <b>Corte niño</b> mañana a las <b>3:15 pm</b>. ¿Vienes?
+    <span class="botones"><span>Sí, voy</span><span>Cancelar</span></span>
+    <span class="hora">8:02 a. m. ✓✓</span>
+  </div>
+</div>
+
+<style>
+  .escena {
+    position: relative;
+    width: min(100%, 340px);
+    margin-inline: auto;
+    padding-bottom: 70px;
+  }
+
+  .telefono {
+    background: var(--tinta);
+    border-radius: 42px;
+    padding: 12px;
+    box-shadow: 0 30px 60px -30px rgb(63 20 56 / 0.55);
+  }
+
+  .pantalla {
+    background: #faf7f9;
+    border-radius: 32px;
+    overflow: hidden;
+    font-size: 11px;
+    line-height: 1.3;
+  }
+
+  .barra {
+    padding: 22px 16px 8px;
+    display: grid;
+    gap: 2px;
+  }
+
+  .barra strong {
+    font-size: 15px;
+  }
+
+  .barra span {
+    color: var(--gris);
+  }
+
+  .dias {
+    display: flex;
+    gap: 6px;
+    padding: 0 16px 10px;
+    border-bottom: 1px solid var(--linea);
+  }
+
+  .dias span {
+    border: 1px solid var(--linea);
+    background: var(--blanco);
+    border-radius: 99px;
+    padding: 4px 9px;
+    font-weight: 500;
+  }
+
+  .dias .activo {
+    background: var(--ciruela);
+    border-color: var(--ciruela);
+    color: var(--blanco);
+  }
+
+  .columnas {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    background: var(--blanco);
+    border-bottom: 1px solid var(--linea);
+  }
+
+  .cab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    font-weight: 700;
+  }
+
+  .cab + .cab {
+    border-left: 1px solid var(--linea);
+  }
+
+  .cab i {
+    width: 8px;
+    height: 8px;
+    border-radius: 99px;
+  }
+
+  .grilla {
+    position: relative;
+    height: 250px;
+    background:
+      linear-gradient(to right, transparent calc(50% - 0.5px), var(--linea) calc(50% - 0.5px), var(--linea) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
+      repeating-linear-gradient(to bottom, var(--linea) 0 1px, transparent 1px 60px),
+      var(--blanco);
+  }
+
+  .cita {
+    position: absolute;
+    width: calc(50% - 8px);
+    margin-top: 6px;
+    border-left: 3px solid var(--ciruela);
+    background: #f7eef5;
+    color: var(--ciruela);
+    border-radius: 7px;
+    padding: 4px 6px;
+    overflow: hidden;
+  }
+
+  .cita small {
+    display: block;
+    opacity: 0.8;
+  }
+
+  .cita.llego {
+    background: #fdf0d5;
+    border-color: #8a5a0b;
+    color: #8a5a0b;
+  }
+
+  .cita.web {
+    border-left-color: var(--fucsia);
+  }
+
+  .total {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 16px 22px;
+    color: var(--gris);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .total b {
+    color: var(--tinta);
+  }
+
+  .whatsapp {
+    position: absolute;
+    right: -28px;
+    bottom: 0;
+    width: 250px;
+    background: #e7fbd8;
+    border-radius: 14px 14px 4px 14px;
+    padding: 10px 12px 8px;
+    font-size: 13px;
+    line-height: 1.4;
+    box-shadow: 0 16px 30px -18px rgb(30 26 34 / 0.6);
+    animation: llega 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.2) 0.6s both;
+  }
+
+  .de {
+    display: block;
+    font-weight: 700;
+    color: var(--menta);
+    font-size: 12px;
+    margin-bottom: 2px;
+  }
+
+  .botones {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .botones span {
+    flex: 1;
+    text-align: center;
+    background: var(--blanco);
+    border-radius: 8px;
+    padding: 6px 0;
+    color: #0b7a6b;
+    font-weight: 600;
+  }
+
+  .hora {
+    display: block;
+    text-align: right;
+    font-size: 10.5px;
+    color: var(--gris);
+    margin-top: 4px;
+  }
+
+  /* El mensaje llega: parte visible (solo se desplaza), así la página está completa aunque no se anime. */
+  @keyframes llega {
+    from {
+      transform: translateY(18px) scale(0.96);
+    }
+  }
+
+  @media (max-width: 420px) {
+    .whatsapp {
+      right: -6px;
+      width: 230px;
+    }
+  }
+</style>
