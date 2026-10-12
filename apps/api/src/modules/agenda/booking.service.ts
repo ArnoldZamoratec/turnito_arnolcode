@@ -85,7 +85,11 @@ export async function loadDayAgenda(
       [q.branchId, q.serviceId, q.staffId ?? null, q.onlineOnly ?? false],
     )
   ).rows;
-  if (q.staffId && staffRows.length === 0) throw invalid("Ese estilista no realiza este servicio");
+  if (q.staffId && staffRows.length === 0) {
+    // Inactivo o sin reservas online: simplemente no tiene horarios. Activo pero sin el servicio: error claro.
+    const active = await tx.query("SELECT 1 FROM agenda.staff WHERE id = $1 AND active AND deleted_at IS NULL", [q.staffId]);
+    if (active.rowCount && !q.onlineOnly) throw invalid("Ese estilista no realiza este servicio");
+  }
   const ids = staffRows.map((s) => s.id);
 
   const dayStart = zonedToUtc(q.date, "00:00", branch.timezone);

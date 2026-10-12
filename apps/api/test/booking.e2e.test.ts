@@ -127,19 +127,47 @@ describe("agenda de recepción", () => {
   });
 });
 
+describe("equipo", () => {
+  it("un estilista nuevo nace con horario y servicios, y queda disponible", async () => {
+    const created = await call("POST", "/v1/staff", {
+      cookie: owner, tenant: tenantId,
+      body: { branchId, displayName: "Kevin", serviceIds: [serviceId] },
+    });
+    expect(created.status).toBe(201);
+    const avail = await call("GET", `/v1/branches/${branchId}/availability?serviceId=${serviceId}&date=${monday}&staffId=${created.body.id}`, { cookie: owner, tenant: tenantId });
+    expect(avail.body.slots[0].start).toBe(`${monday}T14:00:00.000Z`);
+  });
+
+  it("se edita nombre, horario y se desactiva", async () => {
+    const created = await call("POST", "/v1/staff", { cookie: owner, tenant: tenantId, body: { branchId, displayName: "Temporal", serviceIds: [serviceId] } });
+    const id = created.body.id;
+    expect((await call("PATCH", `/v1/staff/${id}`, { cookie: owner, tenant: tenantId, body: { displayName: "Kiara", color: "#0E7C66" } })).status).toBe(200);
+    expect((await call("PUT", `/v1/staff/${id}/schedule`, { cookie: owner, tenant: tenantId, body: { weekly: [{ weekday: 1, start: "14:00", end: "18:00" }] } })).status).toBe(200);
+    const avail = await call("GET", `/v1/branches/${branchId}/availability?serviceId=${serviceId}&date=${monday}&staffId=${id}`, { cookie: owner, tenant: tenantId });
+    expect(avail.body.slots[0].start).toBe(`${monday}T19:00:00.000Z`); // 14:00 Lima
+
+    await call("PATCH", `/v1/staff/${id}`, { cookie: owner, tenant: tenantId, body: { active: false } });
+    const list = await call("GET", `/v1/staff?branchId=${branchId}`, { cookie: owner, tenant: tenantId });
+    const kiara = list.body.find((s: any) => s.id === id);
+    expect(kiara).toMatchObject({ displayName: "Kiara", color: "#0E7C66", active: false });
+    const after = await call("GET", `/v1/branches/${branchId}/availability?serviceId=${serviceId}&date=${monday}&staffId=${id}`, { cookie: owner, tenant: tenantId });
+    expect(after.body.slots).toEqual([]);
+  });
+});
+
 describe("reserva pública", () => {
   it("hold + confirmación crean la cita y la clienta", async () => {
     const salon = await call("GET", `/v1/public/${slug}`);
     expect(salon.status).toBe(200);
     expect(salon.body.name).toBe("Barbería Lucho");
 
-    const avail = await call("GET", `/v1/public/${slug}/availability?serviceId=${serviceId}&date=${monday}`);
+    const avail = await call("GET", `/v1/public/${slug}/availability?serviceId=${serviceId}&date=${monday}&staffId=${staffId}`);
     expect(avail.body.slots.map((s: any) => s.start)).not.toContain(`${monday}T15:00:00.000Z`);
 
-    const hold = await call("POST", `/v1/public/${slug}/holds`, { body: { serviceId, startsAt: `${monday}T20:00:00.000Z` }, key: "h-1" });
+    const hold = await call("POST", `/v1/public/${slug}/holds`, { body: { serviceId, staffId, startsAt: `${monday}T20:00:00.000Z` }, key: "h-1" });
     expect(hold.status).toBe(201);
 
-    const competitor = await call("POST", `/v1/public/${slug}/holds`, { body: { serviceId, startsAt: `${monday}T20:00:00.000Z` } });
+    const competitor = await call("POST", `/v1/public/${slug}/holds`, { body: { serviceId, staffId, startsAt: `${monday}T20:00:00.000Z` } });
     expect(competitor.status).toBe(409);
 
     const confirm = await call("POST", `/v1/public/${slug}/holds/${hold.body.holdId}/confirm`, {

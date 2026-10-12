@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Inject, Param, Post, Put, Query } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Param, Patch, Post, Put, Query } from "@nestjs/common";
 import { withTenant } from "@salon/db";
 import { uuidv7 } from "@salon/kernel";
 import type pg from "pg";
@@ -10,24 +10,35 @@ import { assertBranchAccess, Ctx, InTenant, type TenantContext } from "../../pla
 const HHMM = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Usa formato HH:MM");
 const DATE = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Usa formato AAAA-MM-DD");
 
+const Weekly = z
+  .array(z.object({ weekday: z.number().int().min(1).max(7), start: HHMM, end: HHMM }))
+  .max(28)
+  .refine((list) => list.every((d) => d.start < d.end), "Cada tramo debe terminar después de empezar")
+  .refine((list) => {
+    for (const a of list)
+      for (const b of list) if (a !== b && a.weekday === b.weekday && a.start < b.end && b.start < a.end) return false;
+    return true;
+  }, "Hay tramos que se solapan en el mismo día");
+
 const StaffInput = z.object({
   branchId: z.uuid(),
   displayName: z.string().trim().min(1).max(40),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
   bookableOnline: z.boolean().default(true),
   serviceIds: z.array(z.uuid()).default([]),
+  weekly: Weekly.optional(),
 });
 
-const ScheduleInput = z.object({
-  weekly: z
-    .array(z.object({ weekday: z.number().int().min(1).max(7), start: HHMM, end: HHMM }))
-    .max(28)
-    .refine((list) => list.every((d) => d.start < d.end), "Cada tramo debe terminar después de empezar")
-    .refine((list) => {
-      for (const a of list)
-        for (const b of list) if (a !== b && a.weekday === b.weekday && a.start < b.end && b.start < a.end) return false;
-      return true;
-    }, "Hay tramos que se solapan en el mismo día"),
+const ScheduleInput = z.object({ weekly: Weekly });
+
+/** Lunes a sábado de 9 a 7: sin horario el estilista no aparece disponible en ninguna parte. */
+const DEFAULT_WEEK = [1, 2, 3, 4, 5, 6].map((weekday) => ({ weekday, start: "09:00", end: "19:00" }));
+
+const StaffPatch = z.object({
+  displayName: z.string().trim().min(1).max(40).optional(),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+  bookableOnline: z.boolean().optional(),
+  active: z.boolean().optional(),
 });
 
 const OverrideInput = z
@@ -69,7 +80,25 @@ export class StaffController {
         [id, ctx.tenantId, s.branchId, s.displayName, s.color ?? null, s.bookableOnline],
       );
       await replaceServices(tx, ctx.tenantId, id, s.serviceIds);
+      await replaceSchedule(tx, ctx.tenantId, id, s.weekly ?? DEFAULT_WEEK);
       return { id };
+    });
+  }
+
+  /** Nombre, color, si recibe reservas online y si sigue activo (desactivar no borra su historial). */
+  @Patch(":id")
+  @InTenant("owner", "admin")
+  update(@Ctx() ctx: TenantContext, @Param("id") id: string, @Body() body: unknown) {
+    const p = StaffPatch.parse(body);
+    return withTenant(this.pool, ctx, async (tx) => {
+      const { rowCount } = await tx.query(
+        `UPDATE agenda.staff SET display_name = COALESCE($2, display_name), color = COALESCE($3, color),
+                bookable_online = COALESCE($4, bookable_online), active = COALESCE($5, active)
+         WHERE id = $1 AND deleted_at IS NULL`,
+        [id, p.displayName ?? null, p.color ?? null, p.bookableOnline ?? null, p.active ?? null],
+      );
+      if (!rowCount) throw notFound("El estilista");
+      return { ok: true };
     });
   }
 
@@ -80,14 +109,7 @@ export class StaffController {
     const { weekly } = ScheduleInput.parse(body);
     return withTenant(this.pool, ctx, async (tx) => {
       await assertStaff(tx, id);
-      await tx.query("DELETE FROM agenda.working_hours WHERE staff_id = $1 AND valid_from >= current_date", [id]);
-      await tx.query("UPDATE agenda.working_hours SET valid_to = current_date - 1 WHERE staff_id = $1 AND valid_to IS NULL", [id]);
-      for (const d of weekly) {
-        await tx.query(
-          "INSERT INTO agenda.working_hours (id, tenant_id, staff_id, weekday, start_local, end_local, valid_from) VALUES ($1, $2, $3, $4, $5, $6, current_date)",
-          [uuidv7(), ctx.tenantId, id, d.weekday, d.start, d.end],
-        );
-      }
+      await replaceSchedule(tx, ctx.tenantId, id, weekly);
       return { ok: true };
     });
   }
@@ -143,4 +165,21 @@ async function replaceServices(tx: pg.PoolClient, tenantId: string, staffId: str
     [tenantId, staffId, serviceIds],
   );
   if (rowCount !== new Set(serviceIds).size) throw invalid("Algún servicio no existe");
+}
+
+/** Reemplaza la plantilla semanal desde hoy; la anterior queda cerrada como historial. */
+async function replaceSchedule(
+  tx: pg.PoolClient,
+  tenantId: string,
+  staffId: string,
+  weekly: { weekday: number; start: string; end: string }[],
+): Promise<void> {
+  await tx.query("DELETE FROM agenda.working_hours WHERE staff_id = $1 AND valid_from >= current_date", [staffId]);
+  await tx.query("UPDATE agenda.working_hours SET valid_to = current_date - 1 WHERE staff_id = $1 AND valid_to IS NULL", [staffId]);
+  for (const d of weekly) {
+    await tx.query(
+      "INSERT INTO agenda.working_hours (id, tenant_id, staff_id, weekday, start_local, end_local, valid_from) VALUES ($1, $2, $3, $4, $5, $6, current_date)",
+      [uuidv7(), tenantId, staffId, d.weekday, d.start, d.end],
+    );
+  }
 }

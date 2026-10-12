@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useMemo, useState } from "react";
 import { type AgendaItem, api, ApiError, type Client, type Salon, type Service, type Slot, type Staff } from "../lib/api";
 import { addDays, localToIso, longDate, minutesFromMidnight, money, shortDate, timeIn, today, waLink } from "../lib/format";
+import { TeamSheet } from "../components/TeamSheet";
 import { Button, Chip, ErrorBox, Field, Sheet } from "../components/ui";
 
 interface Branch {
@@ -36,6 +37,8 @@ function AgendaBoard({ salon, branch, userName, onSwitchSalon }: { salon: Salon;
   const tz = branch.timezone;
   const [date, setDate] = useState(() => today(tz));
   const [newAt, setNewAt] = useState<{ staffId?: string; time?: string } | null>(null);
+  const [team, setTeam] = useState<{ startWith?: string } | null>(null);
+  const canManage = salon.role === "owner" || salon.role === "admin";
   const [selected, setSelected] = useState<AgendaItem | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -85,6 +88,11 @@ function AgendaBoard({ salon, branch, userName, onSwitchSalon }: { salon: Salon;
             <p className="text-sm text-muted">{longDate(date)}</p>
           </div>
           <div className="flex items-center gap-2">
+            {canManage && (
+              <Button variant="secondary" onClick={() => setTeam({})} className="text-sm">
+                Equipo
+              </Button>
+            )}
             <Button variant="secondary" onClick={copyLink} className="text-sm">
               {copied ? "¡Enlace copiado!" : "Copiar enlace de reservas"}
             </Button>
@@ -118,16 +126,25 @@ function AgendaBoard({ salon, branch, userName, onSwitchSalon }: { salon: Salon;
         </div>
         <ErrorBox error={agenda.error ?? staff.error} />
         {columns.length === 0 && staff.isSuccess ? (
-          <p className="rounded-2xl border border-dashed border-line p-6 text-muted">Aún no hay estilistas activos en esta sucursal.</p>
+          <div className="grid justify-items-start gap-3 rounded-2xl border border-dashed border-line p-6">
+            <p className="text-muted">Aún no hay estilistas activos en esta sucursal.</p>
+            {canManage && <Button onClick={() => setTeam({ startWith: "new" })}>+ Agregar estilista</Button>}
+          </div>
         ) : (
           <div className="overflow-x-auto rounded-2xl border border-line bg-card">
             <div className="grid min-w-fit" style={{ gridTemplateColumns: `52px repeat(${columns.length}, minmax(132px, 1fr))` }}>
               <div className="sticky left-0 z-10 border-b border-line bg-card" />
               {columns.map((s) => (
-                <div key={s.id} className="flex items-center gap-2 border-b border-l border-line px-3 py-2.5 font-medium">
+                <button
+                  key={s.id}
+                  className="flex items-center gap-2 border-b border-l border-line px-3 py-2.5 text-left font-medium enabled:hover:bg-plum-50"
+                  disabled={!canManage}
+                  title={canManage ? `Editar a ${s.displayName}` : undefined}
+                  onClick={() => setTeam({ startWith: s.id })}
+                >
                   <span className="size-2.5 rounded-full" style={{ background: s.color }} />
                   <span className="truncate">{s.displayName}</span>
-                </div>
+                </button>
               ))}
 
               <div className="sticky left-0 z-10 bg-card" style={{ height: (gridEnd - gridStart) * PX_PER_MIN }}>
@@ -169,7 +186,17 @@ function AgendaBoard({ salon, branch, userName, onSwitchSalon }: { salon: Salon;
           initial={newAt}
           services={services.data.filter((s) => s.active)}
           staff={columns}
+          canManage={canManage}
           onClose={() => setNewAt(null)}
+        />
+      )}
+      {team && services.data && (
+        <TeamSheet
+          branchId={branch.id}
+          staff={staff.data ?? []}
+          services={services.data.filter((s) => s.active)}
+          startWith={team.startWith}
+          onClose={() => setTeam(null)}
         />
       )}
       {selected && <AppointmentSheet item={selected} tz={tz} salonName={salon.name} onClose={() => setSelected(null)} />}
@@ -239,6 +266,7 @@ function NewAppointmentSheet({
   initial,
   services,
   staff,
+  canManage,
   onClose,
 }: {
   branch: Branch;
@@ -246,12 +274,13 @@ function NewAppointmentSheet({
   initial: { staffId?: string; time?: string };
   services: Service[];
   staff: Staff[];
+  canManage: boolean;
   onClose: () => void;
 }) {
   const qc = useQueryClient();
   const [idempotencyKey] = useState(() => uuidv7());
   const [serviceId, setServiceId] = useState(services[0]?.id ?? "");
-  const [staffId, setStaffId] = useState(initial.staffId ?? "");
+  const [chosenStaffId, setStaffId] = useState(initial.staffId ?? "");
   const [day, setDay] = useState(date);
   const [time, setTime] = useState(initial.time ?? "");
   const [search, setSearch] = useState("");
@@ -259,8 +288,11 @@ function NewAppointmentSheet({
   const [newClient, setNewClient] = useState({ fullName: "", phone: "" });
   const [notes, setNotes] = useState("");
   const [outsideHours, setOutsideHours] = useState(false);
+  const [addingStaff, setAddingStaff] = useState(false);
 
   const eligibleStaff = staff.filter((s) => s.serviceIds.includes(serviceId));
+  // Si el estilista elegido no hace el servicio nuevo, se vuelve a "quien esté libre".
+  const staffId = eligibleStaff.some((s) => s.id === chosenStaffId) ? chosenStaffId : "";
   const slots = useQuery({
     queryKey: ["availability", branch.id, serviceId, day, staffId],
     queryFn: () =>
@@ -326,7 +358,17 @@ function NewAppointmentSheet({
                 {s.displayName}
               </Chip>
             ))}
+            {canManage && (
+              <Chip onClick={() => setAddingStaff(true)} aria-label="Agregar estilista">
+                + Nuevo
+              </Chip>
+            )}
           </div>
+          {staff.length > eligibleStaff.length && (
+            <p className="text-sm text-muted">
+              {staff.length - eligibleStaff.length === 1 ? "1 estilista no hace" : `${staff.length - eligibleStaff.length} estilistas no hacen`} este servicio.
+            </p>
+          )}
         </fieldset>
 
         <div className="grid grid-cols-2 gap-3">
@@ -414,6 +456,16 @@ function NewAppointmentSheet({
           Agendar
         </Button>
       </form>
+      {addingStaff && (
+        <TeamSheet
+          branchId={branch.id}
+          staff={staff}
+          services={services}
+          startWith="new"
+          onClose={() => setAddingStaff(false)}
+          onCreated={(id) => setStaffId(id)}
+        />
+      )}
     </Sheet>
   );
 }
