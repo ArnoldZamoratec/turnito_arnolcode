@@ -8,3 +8,5 @@ dist/
 coverage/
 *.log
 .pg.log
+.api.log
+.web.log

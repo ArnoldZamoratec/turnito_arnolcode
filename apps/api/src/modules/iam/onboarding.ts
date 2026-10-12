@@ -6,7 +6,7 @@ import { z } from "zod";
 import { PG_POOL } from "../../platform/database.js";
 import { conflict } from "../../platform/errors.js";
 import { audit } from "../../platform/outbox.js";
-import { Authenticated, CurrentUser, type SessionUser } from "../../platform/tenancy.js";
+import { Authenticated, Ctx, CurrentUser, InTenant, type SessionUser, type TenantContext } from "../../platform/tenancy.js";
 
 // Plantillas para que el salón quede listo en minutos (precios en céntimos de sol, editables).
 const TEMPLATES = {
@@ -56,6 +56,19 @@ export class OnboardingController {
       [user.id],
     );
     return { user, salons: rows };
+  }
+
+  /** Sucursales del salón activo visibles para el usuario. */
+  @Get("branches")
+  @InTenant()
+  branches(@Ctx() ctx: TenantContext) {
+    return withTenant(this.pool, ctx, async (tx) => {
+      const { rows } = await tx.query<{ id: string }>(
+        `SELECT id, name, timezone, booking_slug AS "bookingSlug", slot_step_min AS "slotStepMin", currency
+         FROM core.branches WHERE deleted_at IS NULL ORDER BY created_at`,
+      );
+      return ctx.branchIds ? rows.filter((b) => ctx.branchIds!.includes(b.id)) : rows;
+    });
   }
 
   /** Crea el salón, su primera sucursal y al usuario como dueño. */

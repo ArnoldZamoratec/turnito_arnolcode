@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+/* Paleta: ciruela de tinte sobre neutros cálidos-rosados; verde menta para "libre". */
+@theme {
+  --color-ink: #1f1a24;
+  --color-muted: #6b6274;
+  --color-line: #e7e0e8;
+  --color-paper: #faf7f9;
+  --color-card: #ffffff;
+  --color-plum-50: #f7eef5;
+  --color-plum-100: #eedbe9;
+  --color-plum-500: #8a3a7c;
+  --color-plum-600: #74306a;
+  --color-plum-700: #5b2150;
+  --color-mint-100: #dff3ea;
+  --color-mint-600: #1f7a55;
+  --color-amber-100: #fdf0d5;
+  --color-amber-700: #8a5a0b;
+  --color-rose-100: #fde2e2;
+  --color-rose-700: #a12b2b;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-plum-500);
+  outline-offset: 2px;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}

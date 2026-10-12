@@ -13,3 +13,5 @@ minimumReleaseAgeExclude:
   - "@nestjs/common@12.1.3"
   - "@nestjs/core@12.1.3"
   - "@nestjs/platform-fastify@12.1.3"
+  - "@tanstack/query-core@5.104.2"
+  - "@tanstack/react-query@5.104.2"
