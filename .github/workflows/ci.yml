@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Tipos, tests y build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    # Postgres real: los tests de aislamiento entre salones (RLS) y de no solapamiento
+    # dependen del motor, no se pueden simular.
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: salon_test
+        ports:
+          - 54329:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      NODE_ENV: test
+      PGPORT: "54329"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Activar pnpm
+        run: corepack enable
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Compilar paquetes compartidos
+        run: |
+          pnpm --filter @salon/kernel build
+          pnpm --filter @salon/db build
+
+      - name: Migraciones (falla si alguna migración aplicada fue editada)
+        run: pnpm --filter @salon/db migrate
+
+      - name: Tipos
+        run: |
+          pnpm --filter @salon/api typecheck
+          pnpm --filter @salon/web typecheck
+
+      - name: Tests de base de datos (RLS y constraints)
+        run: pnpm --filter @salon/db test
+
+      - name: Tests del kernel
+        run: pnpm --filter @salon/kernel test
+
+      - name: Tests de la API (disponibilidad + e2e)
+        run: pnpm --filter @salon/api test
+
+      - name: Build de panel y landing
+        run: |
+          pnpm --filter @salon/web build
+          pnpm --filter @salon/landing build
