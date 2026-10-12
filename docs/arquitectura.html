@@ -1,0 +1,2627 @@
+<title>Arquitectura del SaaS de salones</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: technical dossier — sticky chapter index on the left, one reading column, wide tables scroll in place */
+:root {
+  --bg: #F6F7F9;
+  --surface: #FFFFFF;
+  --fg: #1B2230;
+  --muted: #5A6475;
+  --line: #DDE1E8;
+  --accent: #7A2E6B;      /* tinte ciruela */
+  --accent-soft: #F3E7F0;
+  --code-bg: #EEF1F5;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "Cascadia Code", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12151B; --surface: #1A1E26; --fg: #E4E7ED; --muted: #9AA3B2; --line: #2C323D;
+    --accent: #E39AD2; --accent-soft: #2E1F2B; --code-bg: #20252E; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12151B; --surface: #1A1E26; --fg: #E4E7ED; --muted: #9AA3B2; --line: #2C323D;
+  --accent: #E39AD2; --accent-soft: #2E1F2B; --code-bg: #20252E; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 16px; line-height: 1.6; padding-inline: 16px; }
+a { color: var(--accent); text-underline-offset: 2px; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+.shell { max-width: 1240px; margin: 0 auto; display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 56px; padding-block: 40px 80px; }
+
+header.masthead { grid-column: 1 / -1; display: grid; gap: 14px; padding-bottom: 28px; border-bottom: 1px solid var(--line); }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+header.masthead h1 { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 5vw, 52px); line-height: 1.05; margin: 0; text-wrap: balance; max-width: 22ch; }
+.lede { max-width: 66ch; color: var(--muted); margin: 0; font-size: 17px; }
+.facts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.facts span { font-family: var(--mono); font-size: 12.5px; padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); }
+
+nav.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow: auto; font-size: 14px; }
+nav.toc .eyebrow { display: block; margin-bottom: 10px; }
+nav.toc ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+nav.toc ul ul { display: none; }
+nav.toc a { display: block; padding: 5px 10px; border-left: 2px solid transparent; color: var(--muted); text-decoration: none; line-height: 1.35; }
+nav.toc a:hover { color: var(--fg); }
+nav.toc a.active { color: var(--accent); border-left-color: var(--accent); background: var(--accent-soft); }
+details.toc-mobile { display: none; }
+
+main { min-width: 0; }
+section.chapter { padding-block: 8px 28px; }
+section.chapter + section.chapter { border-top: 1px solid var(--line); padding-top: 36px; }
+main > p, main > ul { max-width: 70ch; }
+h2 { font-family: var(--display); font-weight: 700; font-size: 30px; line-height: 1.15; margin: 0 0 18px; text-wrap: balance; scroll-margin-top: 20px; }
+h3 { font-family: var(--display); font-weight: 500; font-size: 21px; margin: 32px 0 10px; text-wrap: balance; }
+p, li { max-width: 72ch; }
+ul, ol { padding-left: 22px; }
+li + li { margin-top: 4px; }
+strong { font-weight: 600; }
+hr { border: 0; border-top: 1px solid var(--line); margin: 32px 0; }
+
+blockquote { margin: 18px 0; padding: 12px 16px; border-left: 3px solid var(--accent); background: var(--accent-soft); border-radius: 0 6px 6px 0; max-width: 72ch; }
+blockquote p { margin: 0; }
+
+code { font-family: var(--mono); font-size: .88em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+pre:not(.mermaid) { background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 16px; overflow-x: auto; font-size: 13px; line-height: 1.55; max-width: 100%; }
+pre code { background: none; padding: 0; font-size: inherit; }
+
+.table-wrap { overflow-x: auto; margin: 16px 0 22px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 14px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); min-width: 110px; }
+th { font-family: var(--mono); font-weight: 500; font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); background: var(--code-bg); }
+tr:last-child td { border-bottom: 0; }
+td:first-child { font-weight: 500; }
+
+figure.diagram { margin: 20px 0 26px; padding: 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); overflow-x: auto; }
+pre.mermaid { margin: 0; background: none; border: 0; text-align: center; font-family: var(--body); }
+
+footer { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 18px; color: var(--muted); font-size: 13px; }
+
+@media (max-width: 900px) {
+  .shell { grid-template-columns: minmax(0, 1fr); gap: 24px; padding-block: 24px 56px; }
+  nav.toc { display: none; }
+  details.toc-mobile { display: block; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 10px 14px; }
+  details.toc-mobile summary { cursor: pointer; font-weight: 600; }
+  details.toc-mobile ul { list-style: none; padding: 8px 0 0; margin: 0; }
+  details.toc-mobile ul ul { display: none; }
+  details.toc-mobile a { display: block; padding: 6px 0; text-decoration: none; }
+  h2 { font-size: 25px; }
+}
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+</style>
+
+<div class="shell">
+  <header class="masthead">
+    <span class="eyebrow">Documento de arquitectura · v1 · octubre 2026</span>
+    <h1>SaaS de gestión para peluquerías y salones</h1>
+    <p class="lede">Decisiones de arquitectura para un MVP vendible en 8–10 semanas con un equipo de 1–3 desarrolladores, pensado para la peluquería de barrio en Perú y preparado para crecer a multi-sucursal y al resto de LATAM.</p>
+    <div class="facts">
+      <span>Monolito modular · TypeScript</span>
+      <span>PostgreSQL + RLS</span>
+      <span>PWA offline-first</span>
+      <span>WhatsApp · Yape · Plin</span>
+      <span>≈ USD 50–66 / mes</span>
+    </div>
+  </header>
+
+  <nav class="toc" aria-label="Contenido">
+    <span class="eyebrow">Contenido</span>
+    <div class="toc">
+<ul>
+<li><a href="#0-resumen-ejecutivo-las-12-decisiones-que-importan">0. Resumen ejecutivo (las 12 decisiones que importan)</a></li>
+<li><a href="#1-an-lisis-del-dominio">1. Análisis del dominio</a></li>
+<li><a href="#2-mercado-y-referentes">2. Mercado y referentes</a></li>
+<li><a href="#3-estilo-arquitect-nico">3. Estilo arquitectónico</a></li>
+<li><a href="#4-multi-tenancy">4. Multi-tenancy</a></li>
+<li><a href="#5-stack-tecnol-gico">5. Stack tecnológico</a></li>
+<li><a href="#6-modelo-de-datos">6. Modelo de datos</a></li>
+<li><a href="#7-dise-o-de-la-agenda">7. Diseño de la agenda</a></li>
+<li><a href="#8-modo-offline-y-sincronizaci-n">8. Modo offline y sincronización</a></li>
+<li><a href="#9-seguridad-y-cumplimiento">9. Seguridad y cumplimiento</a></li>
+<li><a href="#10-observabilidad-y-operaci-n">10. Observabilidad y operación</a></li>
+<li><a href="#11-estructura-del-repositorio">11. Estructura del repositorio</a></li>
+<li><a href="#12-plan-de-implementaci-n-por-fases">12. Plan de implementación por fases</a></li>
+<li><a href="#13-riesgos-principales">13. Riesgos principales</a></li>
+<li><a href="#14-decisiones-a-validar-con-clientes-reales-antes-de-construir">14. Decisiones a validar con clientes reales antes de construir</a></li>
+<li><a href="#fuentes-consultadas-octubre-2026">Fuentes consultadas (octubre 2026)</a></li>
+</ul>
+</div>
+
+  </nav>
+
+  <main>
+    <details class="toc-mobile"><summary>Contenido</summary><div class="toc">
+<ul>
+<li><a href="#0-resumen-ejecutivo-las-12-decisiones-que-importan">0. Resumen ejecutivo (las 12 decisiones que importan)</a></li>
+<li><a href="#1-an-lisis-del-dominio">1. Análisis del dominio</a></li>
+<li><a href="#2-mercado-y-referentes">2. Mercado y referentes</a></li>
+<li><a href="#3-estilo-arquitect-nico">3. Estilo arquitectónico</a></li>
+<li><a href="#4-multi-tenancy">4. Multi-tenancy</a></li>
+<li><a href="#5-stack-tecnol-gico">5. Stack tecnológico</a></li>
+<li><a href="#6-modelo-de-datos">6. Modelo de datos</a></li>
+<li><a href="#7-dise-o-de-la-agenda">7. Diseño de la agenda</a></li>
+<li><a href="#8-modo-offline-y-sincronizaci-n">8. Modo offline y sincronización</a></li>
+<li><a href="#9-seguridad-y-cumplimiento">9. Seguridad y cumplimiento</a></li>
+<li><a href="#10-observabilidad-y-operaci-n">10. Observabilidad y operación</a></li>
+<li><a href="#11-estructura-del-repositorio">11. Estructura del repositorio</a></li>
+<li><a href="#12-plan-de-implementaci-n-por-fases">12. Plan de implementación por fases</a></li>
+<li><a href="#13-riesgos-principales">13. Riesgos principales</a></li>
+<li><a href="#14-decisiones-a-validar-con-clientes-reales-antes-de-construir">14. Decisiones a validar con clientes reales antes de construir</a></li>
+<li><a href="#fuentes-consultadas-octubre-2026">Fuentes consultadas (octubre 2026)</a></li>
+</ul>
+</div>
+</details>
+    <section class="chapter"><h2 id="0-resumen-ejecutivo-las-12-decisiones-que-importan">0. Resumen ejecutivo (las 12 decisiones que importan)</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Decisión</th>
+<th>Descartado</th>
+<th>Por qué</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>Monolito modular</strong> en TypeScript, un proceso API + un proceso worker</td>
+<td>Microservicios, serverless puro</td>
+<td>1–3 devs no pueden operar N servicios; los límites se imponen en el código, no en la red</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>PostgreSQL</strong> gestionado (Neon)</td>
+<td>Firestore</td>
+<td>La invariante "no solapar citas" se resuelve con un <code>EXCLUDE</code> constraint; caja, comisiones y reportes son relacionales</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Multi-tenant: BD compartida + <code>tenant_id</code> + Row Level Security</strong></td>
+<td>Esquema por tenant, BD por tenant</td>
+<td>Costo y migraciones O(1); RLS da aislamiento en el motor, no en la disciplina del junior</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>NestJS (adaptador Fastify) + contratos <code>ts-rest</code> + Zod</strong> (REST + OpenAPI)</td>
+<td>FastAPI, Django, GraphQL, tRPC</td>
+<td>Un solo lenguaje entre PWA offline y API: los mismos esquemas Zod validan en el teléfono y en el servidor</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>PWA React (Vite) offline-first</strong> para el panel; <strong>Astro SSR</strong> para la página pública de reserva</td>
+<td>App nativa, Next.js para todo</td>
+<td>Android barato + datos móviles: PWA instalable, sin tienda; página pública con casi cero JS y previews de WhatsApp</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>Cola en Postgres (<code>pg-boss</code>)</strong> para recordatorios y tareas</td>
+<td>BullMQ+Redis, Celery, SQS</td>
+<td>Un componente menos que operar y pagar; suficiente hasta ~millones de jobs/día</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>WhatsApp Cloud API directa (Meta)</strong> + fallback gratuito <code>wa.me</code> + email (Resend)</td>
+<td>Twilio/360dialog al inicio, SMS como canal principal</td>
+<td>El canal real en Perú es WhatsApp; el SMS es caro y poco leído</td>
+</tr>
+<tr>
+<td>8</td>
+<td><strong>Better Auth</strong> (sesiones en cookie httpOnly, guardadas en Postgres) + <strong>RBAC con reglas de propiedad</strong></td>
+<td>Firebase Auth, Auth0, ABAC completo</td>
+<td>Sesiones revocables, sin costo por MAU, datos en nuestra BD; 4 roles no justifican un motor ABAC</td>
+</tr>
+<tr>
+<td>9</td>
+<td><strong>Cobro del SaaS: Culqi (tarjeta recurrente) + Yape/transferencia manual con período de gracia</strong></td>
+<td>Stripe</td>
+<td>Stripe no adquiere comercios peruanos y el barbero de barrio a menudo no tiene tarjeta de crédito</td>
+</tr>
+<tr>
+<td>10</td>
+<td><strong>Offline = outbox de comandos + IDs generados en cliente + idempotencia</strong>; las ventas son <em>append-only</em></td>
+<td>CRDTs, Firestore offline, PowerSync en el MVP</td>
+<td>Las ventas no generan conflictos; las citas se marcan en conflicto y las resuelve una persona</td>
+</tr>
+<tr>
+<td>11</td>
+<td><strong>Render (API+worker) + Neon + Cloudflare (Pages/Workers/R2)</strong> ≈ 45–70 USD/mes</td>
+<td>AWS/GCP "a mano", VPS propio</td>
+<td>Cero administración de servidores, PITR incluido, sin costo de egress en archivos</td>
+</tr>
+<tr>
+<td>12</td>
+<td><strong>Sentry + Better Stack</strong> (logs, uptime, alertas)</td>
+<td>Stack Prometheus/Grafana propio</td>
+<td>Planes gratuitos suficientes; nadie del equipo tiene que mantener la observabilidad</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Suposiciones explícitas</strong> (cámbialas si tienes el dato real):</p>
+<ul>
+<li>S1. ~85–90 % de los usuarios usa Android de gama media/baja; el iPhone es minoritario en barrio.</li>
+<li>S2. Un salón de 1–3 sillas hace 10–40 atenciones/día; parte relevante es <strong>sin cita (walk-in)</strong>.</li>
+<li>S3. Disposición a pagar: S/ 30–80 al mes por sucursal. Se valida antes de construir (ver §14).</li>
+<li>S4. Al inicio, un solo dispositivo hace de caja por sucursal.</li>
+<li>S5. Muchos clientes objetivo están en <strong>Nuevo RUS</strong> o RMT y hoy no emiten comprobante electrónico; SUNAT entra en la Fase 2, no en el MVP.</li>
+</ul>
+<hr />
+</section><section class="chapter"><h2 id="1-an-lisis-del-dominio">1. Análisis del dominio</h2>
+<h3 id="1-1-bounded-contexts-y-clasificaci-n">1.1 Bounded contexts y clasificación</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Contexto</th>
+<th>Responsabilidad</th>
+<th>Tipo</th>
+<th>Justificación</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Agenda</strong> (Scheduling)</td>
+<td>Horarios de estilistas, bloqueos, citas, disponibilidad, retenciones (<em>holds</em>), lista de espera, cola de walk-ins</td>
+<td><strong>Núcleo</strong></td>
+<td>Es lo que se vende: menos huecos, menos ausencias (<em>no-shows</em>), menos llamadas</td>
+</tr>
+<tr>
+<td><strong>Reserva pública</strong> (Booking)</td>
+<td>Enlace público del salón, flujo de reserva del cliente final, confirmación/cancelación</td>
+<td><strong>Núcleo</strong> (parte de Agenda, módulo propio)</td>
+<td>Canal de adquisición; es la cara del producto en WhatsApp/Instagram</td>
+</tr>
+<tr>
+<td><strong>Caja y Pagos</strong> (POS)</td>
+<td>Ventas (tickets), métodos de pago locales, apertura/cierre de caja, anulaciones</td>
+<td><strong>Núcleo secundario</strong></td>
+<td>Lo genérico es la caja; lo que diferencia es Yape/Plin, el uso offline y la conciliación</td>
+</tr>
+<tr>
+<td><strong>Comisiones</strong></td>
+<td>Reglas de comisión, cálculo por ítem vendido, liquidación por período</td>
+<td><strong>Soporte</strong></td>
+<td>Evita conflictos con los estilistas; el modelo "alquiler de silla" es típico en Perú</td>
+</tr>
+<tr>
+<td><strong>Clientes</strong> (CRM)</td>
+<td>Ficha, historial, notas (incluidas las sensibles), fotos, consentimientos</td>
+<td><strong>Soporte</strong></td>
+<td>Necesario y poco diferenciador; lleva la carga legal de la Ley 29733</td>
+</tr>
+<tr>
+<td><strong>Catálogo</strong></td>
+<td>Servicios, duración, precios, qué estilista hace qué</td>
+<td><strong>Soporte</strong></td>
+<td>Datos de referencia que usan Agenda y Caja</td>
+</tr>
+<tr>
+<td><strong>Notificaciones</strong></td>
+<td>Plantillas, envío por WhatsApp/email/SMS, <em>webhooks</em>, registro de entregas</td>
+<td><strong>Soporte</strong></td>
+<td>Infraestructura con reglas de negocio (ventana de 24 h de Meta, opt-in)</td>
+</tr>
+<tr>
+<td><strong>Reportes</strong></td>
+<td>Ingresos, ocupación, ausencias, ranking de estilistas</td>
+<td><strong>Soporte</strong> (read models)</td>
+<td>Solo lee proyecciones; nunca escribe en los otros contextos</td>
+</tr>
+<tr>
+<td><strong>Identidad y Tenancy</strong></td>
+<td>Usuarios, membresías, roles, salones (tenants), sucursales</td>
+<td><strong>Genérico</strong></td>
+<td>Se resuelve con una librería + RLS</td>
+</tr>
+<tr>
+<td><strong>Suscripciones del SaaS</strong> (Billing)</td>
+<td>Planes, límites, cobros al salón, período de gracia</td>
+<td><strong>Genérico</strong></td>
+<td>Se integra con Culqi y Nubefact; no se construye un motor propio</td>
+</tr>
+<tr>
+<td><strong>Facturación electrónica</strong> (Fase 2)</td>
+<td>Boletas y facturas del salón a sus clientes ante SUNAT</td>
+<td><strong>Genérico</strong> detrás de una ACL</td>
+<td>Se delega en un OSE/PSE (Nubefact u otro); en LATAM, un adaptador por país</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="1-2-mapa-de-contextos">1.2 Mapa de contextos</h3>
+<figure class="diagram"><pre class="mermaid">flowchart LR
+  subgraph Genérico
+    IAM[Identidad y Tenancy]
+    BILL[Suscripciones SaaS]
+    EINV[Facturación electrónica&lt;br/&gt;ACL → OSE SUNAT]
+  end
+  subgraph Núcleo
+    AG[Agenda]
+    BK[Reserva pública]
+    POS[Caja y Pagos]
+  end
+  subgraph Soporte
+    CAT[Catálogo]
+    CRM[Clientes]
+    COM[Comisiones]
+    NOT[Notificaciones]
+    REP[Reportes]
+  end
+
+  IAM -- &quot;Shared Kernel: TenantId, BranchId, UserId&quot; --&gt; AG &amp; POS &amp; CRM &amp; CAT &amp; COM
+  CAT -- &quot;Conformista: snapshot de duración/precio&quot; --&gt; AG
+  CAT -- &quot;snapshot de precio&quot; --&gt; POS
+  BK -- &quot;Customer/Supplier: usa la API de Agenda&quot; --&gt; AG
+  CRM -- &quot;ClientId&quot; --&gt; AG
+  AG -- &quot;evento AppointmentCompleted → ticket borrador&quot; --&gt; POS
+  POS -- &quot;evento SaleClosed / SaleVoided&quot; --&gt; COM
+  AG -- &quot;AppointmentConfirmed/Cancelled/Rescheduled&quot; --&gt; NOT
+  POS -- &quot;SaleClosed&quot; --&gt; EINV
+  AG &amp; POS &amp; COM -- &quot;eventos → proyecciones&quot; --&gt; REP
+  BILL -- &quot;límites del plan&quot; --&gt; AG &amp; NOT
+</pre></figure>
+<p><strong>Regla de integración:</strong> los módulos se comunican de dos formas. Para consultas síncronas, a través de la <strong>fachada pública</strong> del módulo (<code>modules/agenda/index.ts</code>). Para efectos secundarios, mediante <strong>eventos de dominio</strong> publicados con <em>transactional outbox</em>. Ningún módulo hace <code>SELECT</code> sobre las tablas de otro módulo.</p>
+<h3 id="1-3-agregados-e-invariantes">1.3 Agregados e invariantes</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Contexto</th>
+<th>Agregado (raíz)</th>
+<th>Invariantes que el sistema <strong>garantiza</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Agenda</td>
+<td><code>Appointment</code> (con sus <code>ServiceLines</code>)</td>
+<td><strong>I1.</strong> Un estilista no tiene dos ocupaciones activas que se solapen (citas, bloqueos y <em>holds</em> incluidos). Se aplica con un <code>EXCLUDE USING gist</code> en BD, no solo en código. <strong>I2.</strong> Una cita solo se crea dentro del horario laboral efectivo del estilista (validación de aplicación). <strong>I3.</strong> Transiciones de estado válidas: <code>held → confirmed → checked_in → completed</code>; <code>cancelled</code> y <code>no_show</code> son terminales. <strong>I4.</strong> Una línea de servicio solo se asigna a un estilista habilitado para ese servicio. <strong>I5.</strong> Un <em>hold</em> expira (5 min por defecto) y libera el espacio</td>
+</tr>
+<tr>
+<td>Agenda</td>
+<td><code>StaffSchedule</code> (plantilla semanal + excepciones)</td>
+<td>Los intervalos de un mismo día no se solapan; <code>start &lt; end</code>; la zona horaria se toma de la sucursal</td>
+</tr>
+<tr>
+<td>Agenda</td>
+<td><code>WaitlistEntry</code></td>
+<td>Una entrada activa por cliente, servicio y ventana; la oferta de un espacio caduca y pasa al siguiente</td>
+</tr>
+<tr>
+<td>Caja</td>
+<td><code>CashSession</code></td>
+<td><strong>I6.</strong> Máximo una sesión abierta por caja/dispositivo. <strong>I7.</strong> El cierre registra el efectivo esperado y el contado; la diferencia queda guardada y nunca se "corrige"</td>
+</tr>
+<tr>
+<td>Caja</td>
+<td><code>Sale</code> (ticket con ítems y pagos)</td>
+<td><strong>I8.</strong> Inmutable una vez cerrada; se anula con un registro de anulación, nunca con <code>UPDATE</code> o <code>DELETE</code>. <strong>I9.</strong> Σ pagos = total al cerrar. <strong>I10.</strong> Los precios son <em>snapshots</em> del momento de la venta. <strong>I11.</strong> Idempotente por <code>id</code> generado en el cliente</td>
+</tr>
+<tr>
+<td>Comisiones</td>
+<td><code>CommissionEntry</code> (append-only) y <code>Settlement</code></td>
+<td><strong>I12.</strong> Toda comisión se deriva de un ítem de venta cerrado; una anulación genera una entrada negativa. <strong>I13.</strong> Un período liquidado no se modifica</td>
+</tr>
+<tr>
+<td>Clientes</td>
+<td><code>Client</code></td>
+<td><strong>I14.</strong> Teléfono único (E.164) por tenant entre los clientes activos. <strong>I15.</strong> No se envían recordatorios ni marketing sin el consentimiento de esa finalidad. <strong>I16.</strong> Las notas sensibles solo se guardan cifradas</td>
+</tr>
+<tr>
+<td>Catálogo</td>
+<td><code>Service</code></td>
+<td>Duración &gt; 0, múltiplo de la granularidad (5 min); precio ≥ 0 en céntimos</td>
+</tr>
+<tr>
+<td>Identidad</td>
+<td><code>Tenant</code>, <code>Membership</code></td>
+<td><strong>I17.</strong> Toda fila de negocio pertenece a exactamente un tenant. <strong>I18.</strong> Cada tenant tiene al menos un <code>owner</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Decisión de modelado clave:</strong> las ocupaciones de un estilista (líneas de servicio, bloqueos, almuerzo, <em>holds</em>) viven en <strong>una sola tabla</strong> (<code>agenda.staff_bookings</code>). Así un único constraint de exclusión cubre todos los casos. Si estuvieran en tablas separadas, I1 dependería de un lock y de que el código no tenga errores.</p>
+<hr />
+</section><section class="chapter"><h2 id="2-mercado-y-referentes">2. Mercado y referentes</h2>
+<blockquote>
+<p>Los datos de precios de terceros son volátiles. Las cifras de este apartado provienen de fuentes secundarias de 2026; verifícalas en las páginas oficiales antes de usarlas para posicionar el precio.</p>
+</blockquote>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Producto</th>
+<th>Modelo</th>
+<th>Lo que hace bien</th>
+<th>Lo que conviene evitar</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Fresha</strong></td>
+<td>Fue "gratis + comisiones" durante años; según fuentes de 2026, desde 2025 cobra suscripción (~USD 14.95 por miembro del equipo o ~USD 19.95 individual) <strong>más 20 % sobre clientes nuevos del marketplace</strong> y procesamiento de tarjeta</td>
+<td>Onboarding rapidísimo, enlace de reserva, POS integrado, <em>marketplace</em></td>
+<td>Depender del marketplace; las comisiones por cliente nuevo generan rechazo y hay quejas por costos ocultos</td>
+</tr>
+<tr>
+<td><strong>Booksy</strong></td>
+<td>Suscripción + "Boost" (comisión por cliente traído)</td>
+<td>Muy fuerte en barberías; app del cliente; perfiles con fotos de trabajos</td>
+<td>Precio por estilista, que castiga al salón pequeño; marketplace sin masa crítica en Perú</td>
+</tr>
+<tr>
+<td><strong>Vagaro</strong></td>
+<td>Suscripción por usuario + add-ons</td>
+<td>POS, inventario, formularios, marketing; muy completo</td>
+<td>Complejidad de menú en menú; pensado para EE. UU.</td>
+</tr>
+<tr>
+<td><strong>Treatwell</strong></td>
+<td>Marketplace europeo con comisión</td>
+<td>Descubrimiento de clientes</td>
+<td>El modelo marketplace no sirve sin demanda local</td>
+</tr>
+<tr>
+<td><strong>Altegio</strong> (ex-YCLIENTS intl.)</td>
+<td>Suscripción por niveles de staff</td>
+<td>Muy profundo: inventario, nómina, comisiones complejas, multi-sucursal</td>
+<td>Curva de aprendizaje alta; UX de ERP</td>
+</tr>
+<tr>
+<td><strong>AgendaPro</strong> (Chile, opera en Perú)</td>
+<td>Suscripción</td>
+<td>Competidor regional real, en español, con recordatorios y pagos</td>
+<td>Su precio y su foco en centros medianos dejan hueco en la barbería de barrio</td>
+</tr>
+<tr>
+<td><strong>Cuaderno + WhatsApp + Excel</strong></td>
+<td>Gratis</td>
+<td>Cero fricción</td>
+<td><strong>Es el competidor principal.</strong> Si el producto es más lento que anotar en un cuaderno, pierde</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="2-1-patrones-que-se-adoptan">2.1 Patrones que se adoptan</h3>
+<ol>
+<li><strong>Enlace público de reserva</strong> (<code>tu-app.pe/barberia-don-lucho</code>) para la bio de Instagram y el estado de WhatsApp. Sin que el cliente final tenga que instalar una app ni crear cuenta.</li>
+<li><strong>Agenda en columnas por estilista</strong> con arrastrar y soltar en escritorio y vista por día y estilista en el móvil.</li>
+<li><strong>Recordatorio con botones "Confirmar / Cancelar"</strong> dentro del mensaje (botones <em>quick reply</em> de WhatsApp).</li>
+<li><strong>Del turno a la caja en un toque:</strong> completar una cita genera el ticket borrador.</li>
+<li><strong>Onboarding en menos de 10 minutos:</strong> nombre del salón → servicios sugeridos por plantilla (barbería/peluquería/uñas) → horarios → enlace listo.</li>
+</ol>
+<h3 id="2-2-patrones-que-se-evitan">2.2 Patrones que se evitan</h3>
+<ul>
+<li><strong>Precio por estilista</strong> en el plan base. Se cobra por sucursal, que es lo que pidió el negocio y además encaja con el salón pequeño.</li>
+<li><strong>Comisión por cliente nuevo</strong> o <em>marketplace</em> en el MVP: no hay demanda que justificarlo.</li>
+<li><strong>Pedir tarjeta para el plan gratis.</strong></li>
+<li><strong>Registro obligatorio del cliente final.</strong> Basta con nombre y teléfono, verificado por WhatsApp solo si hace falta.</li>
+</ul>
+<h3 id="2-3-diferenciadores-para-per">2.3 Diferenciadores para Perú</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Diferenciador</th>
+<th>Cómo se materializa</th>
+<th>Fase</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>WhatsApp como canal principal</strong></td>
+<td>Recordatorios por Cloud API y, en el plan gratis, botón "Enviar por WhatsApp" que abre <code>wa.me/51…?text=…</code> desde el teléfono del salón (costo cero)</td>
+<td>1</td>
+</tr>
+<tr>
+<td><strong>Yape / Plin como métodos de cobro de primera clase</strong></td>
+<td>En la caja: botón Yape/Plin con campo opcional "N.º de operación" para conciliar; QR del salón mostrado en pantalla</td>
+<td>1</td>
+</tr>
+<tr>
+<td><strong>Cola de walk-ins</strong> ("turno virtual")</td>
+<td>El barbero de barrio vive del cliente que llega sin cita: cola visible con tiempo estimado y enlace "te avisamos por WhatsApp cuando falten 2"</td>
+<td>1 (validar)</td>
+</tr>
+<tr>
+<td><strong>Funciona con señal mala</strong></td>
+<td>PWA offline: la caja cobra sin internet; la agenda del día se lee sin conexión</td>
+<td>1</td>
+</tr>
+<tr>
+<td><strong>Comisiones y alquiler de silla</strong></td>
+<td>Reglas por porcentaje, monto fijo y "alquiler de silla" (el estilista paga una renta fija y se queda con sus ventas)</td>
+<td>1 (%), 2 (alquiler)</td>
+</tr>
+<tr>
+<td><strong>Adelantos para reducir ausencias</strong></td>
+<td>Depósito con Yape (vía Culqi) o Mercado Pago al reservar online</td>
+<td>2</td>
+</tr>
+<tr>
+<td><strong>Boleta/factura electrónica SUNAT</strong></td>
+<td>Integración con un OSE/PSE (p. ej. Nubefact, con API REST JSON) usando las credenciales del salón</td>
+<td>2</td>
+</tr>
+<tr>
+<td><strong>Precios en soles y planes accesibles</strong></td>
+<td>Plan gratis útil de verdad; plan básico en el rango de S/ 30–50 (hipótesis S3)</td>
+<td>1</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+</section><section class="chapter"><h2 id="3-estilo-arquitect-nico">3. Estilo arquitectónico</h2>
+<h3 id="3-1-decisi-n-monolito-modular">3.1 Decisión: monolito modular</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Opción</th>
+<th>A favor</th>
+<th>En contra para este equipo</th>
+<th>Veredicto</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Monolito modular</strong></td>
+<td>Un despliegue, una BD, transacciones locales (vitales para I1 e I8), <em>debug</em> simple, barato</td>
+<td>Exige disciplina de límites, que se impone con herramientas</td>
+<td>✅ <strong>Elegido</strong></td>
+</tr>
+<tr>
+<td>Microservicios</td>
+<td>Escalado y despliegue independientes</td>
+<td>Transacciones distribuidas, <em>service mesh</em>, N pipelines, observabilidad distribuida; con 1–3 devs es suicidio operativo</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>Serverless (Cloud Functions/Lambda + Firestore)</td>
+<td>Cero servidores, escala a cero; el equipo conoce Firebase</td>
+<td>Arranques en frío en la reserva pública; sin <code>EXCLUDE</code> constraint; consultas de reportes caras; difícil de testear localmente; <em>lock-in</em></td>
+<td>❌ como núcleo. ✅ para piezas puntuales (Cloudflare Worker de la página pública)</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Sobre Firebase:</strong> su mejor argumento es la sincronización offline de Firestore, que es excelente. Se descarta porque el núcleo (no solapar citas, caja cuadrada, comisiones derivadas, reportes por período) es transaccional y relacional. En Firestore, I1 obliga a materializar un documento por <em>slot</em> y a hacer transacciones sobre ellos, un modelo frágil cuando cambia la granularidad. Firebase se conserva solo como <strong>FCM</strong> para notificaciones push al personal (Fase 2).</p>
+<h3 id="3-2-componentes">3.2 Componentes</h3>
+<figure class="diagram"><pre class="mermaid">flowchart TB
+  subgraph Clientes
+    PWA[&quot;Panel PWA (React + Vite)&lt;br/&gt;dueño · recepción · estilista&lt;br/&gt;IndexedDB + Service Worker&quot;]
+    PUB[&quot;Reserva pública (Astro SSR)&lt;br/&gt;Cloudflare Workers&quot;]
+    WA[(WhatsApp del cliente final)]
+  end
+
+  subgraph Render[&quot;Render (us-east)&quot;]
+    API[&quot;API · NestJS/Fastify&lt;br/&gt;módulos: iam, catalog, crm, agenda,&lt;br/&gt;booking, pos, commissions, notifications,&lt;br/&gt;reports, billing&quot;]
+    WRK[&quot;Worker · mismo código&lt;br/&gt;pg-boss: recordatorios, outbox,&lt;br/&gt;expiración de holds, proyecciones,&lt;br/&gt;backups lógicos&quot;]
+  end
+
+  subgraph Datos
+    PG[(&quot;PostgreSQL · Neon&lt;br/&gt;RLS por tenant · PITR&quot;)]
+    R2[(&quot;Cloudflare R2&lt;br/&gt;fotos · comprobantes · backups&quot;)]
+  end
+
+  subgraph Externos
+    META[WhatsApp Cloud API]
+    RES[Resend · email]
+    CULQI[Culqi / Mercado Pago]
+    OSE[OSE/PSE SUNAT · Fase 2]
+    OBS[Sentry · Better Stack]
+  end
+
+  PWA -- &quot;REST/JSON + SSE&quot; --&gt; API
+  PUB -- &quot;REST (availability, holds)&quot; --&gt; API
+  API --&gt; PG
+  WRK --&gt; PG
+  API -- &quot;URLs prefirmadas&quot; --&gt; R2
+  PWA -- &quot;upload directo&quot; --&gt; R2
+  WRK --&gt; META &amp; RES
+  META -- webhooks --&gt; API
+  WA &lt;--&gt; META
+  API --&gt; CULQI
+  CULQI -- webhooks --&gt; API
+  WRK --&gt; OSE
+  API &amp; WRK &amp; PWA --&gt; OBS
+</pre></figure>
+<h3 id="3-3-evoluci-n-sin-reescritura">3.3 Evolución sin reescritura</h3>
+<p>Las reglas que hacen posible extraer piezas más tarde se adoptan desde el día 1:</p>
+<ol>
+<li><strong>Un esquema PostgreSQL por módulo</strong> (<code>agenda.*</code>, <code>pos.*</code>, <code>crm.*</code>…). Es la frontera física del módulo y facilita moverlo a otra BD.</li>
+<li><strong>Prohibido el acceso cruzado a tablas.</strong> Se verifica en CI con <code>dependency-cruiser</code> (imports) y con una prueba que analiza el SQL de cada repositorio.</li>
+<li><strong>Eventos de dominio con outbox transaccional.</strong> Hoy los consume el mismo worker; mañana pueden ir a SQS, Pub/Sub o NATS sin tocar a los productores.</li>
+<li><strong>IDs UUIDv7</strong> y <code>tenant_id</code> en todas las filas. No hay secuencias globales que impidan mover un tenant.</li>
+<li><strong>API versionada</strong> (<code>/v1</code>) con contrato <code>ts-rest</code> y OpenAPI generado.</li>
+</ol>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Señal de crecimiento</th>
+<th>Paso evolutivo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>&gt; 300 req/s o CPU de la API &gt; 70 % sostenido</td>
+<td>Escalar horizontalmente la API (stateless); agregar Redis para caché y <em>rate limiting</em></td>
+</tr>
+<tr>
+<td>Reportes pesados que afectan la latencia de la agenda</td>
+<td>Réplica de lectura para <code>reports</code>; luego <em>warehouse</em> (ClickHouse o BigQuery) alimentado por el outbox</td>
+</tr>
+<tr>
+<td>&gt; 1 M jobs/día o latencia de la cola</td>
+<td>Mover las colas de <code>pg-boss</code> a BullMQ+Redis o SQS (la interfaz <code>JobQueue</code> ya lo abstrae)</td>
+</tr>
+<tr>
+<td>Notificaciones con ritmo propio (campañas, varios números)</td>
+<td>Extraer <code>notifications</code> como <strong>primer servicio independiente</strong>; ya se comunica solo por eventos</td>
+</tr>
+<tr>
+<td>Cliente <em>enterprise</em> con requisito de aislamiento físico</td>
+<td>Mover ese tenant a una BD dedicada ("silo bajo demanda"); el código no cambia</td>
+</tr>
+<tr>
+<td>Expansión a México/Colombia/Chile</td>
+<td>Nuevos adaptadores de facturación y pagos detrás de los mismos puertos; zona horaria y moneda ya están en <code>branch</code></td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+</section><section class="chapter"><h2 id="4-multi-tenancy">4. Multi-tenancy</h2>
+<h3 id="4-1-comparativa">4.1 Comparativa</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Criterio</th>
+<th>BD compartida + <code>tenant_id</code></th>
+<th>Esquema por tenant</th>
+<th>BD por tenant</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Costo por tenant</td>
+<td>~0</td>
+<td>Bajo, pero el catálogo de PG crece</td>
+<td>Alto (mínimo de instancia o <em>compute</em> por BD)</td>
+</tr>
+<tr>
+<td>Migraciones</td>
+<td>1 ejecución</td>
+<td>N ejecuciones; falla parcial = drift</td>
+<td>N ejecuciones y N conexiones</td>
+</tr>
+<tr>
+<td>Tenants gratis (miles)</td>
+<td>✅</td>
+<td>⚠️ miles de esquemas degradan <code>pg_catalog</code> y las herramientas</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>Aislamiento</td>
+<td>Lógico; <strong>con RLS, en el motor</strong></td>
+<td>Lógico por <code>search_path</code> (un error de <code>search_path</code> = fuga)</td>
+<td>Físico</td>
+</tr>
+<tr>
+<td>Reportes de plataforma</td>
+<td>Triviales</td>
+<td><code>UNION</code> de N esquemas</td>
+<td>ETL</td>
+</tr>
+<tr>
+<td>Pooling de conexiones</td>
+<td>Excelente</td>
+<td>Problemático con <code>search_path</code> en modo transacción</td>
+<td>Un pool por BD</td>
+</tr>
+<tr>
+<td>Restaurar un solo tenant</td>
+<td>Difícil (se hace por export lógico)</td>
+<td>Fácil</td>
+<td>Fácil</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Recomendación: BD compartida + <code>tenant_id</code> + RLS forzada</strong>, con la vía de escape "silo bajo demanda" para clientes grandes. Un modelo freemium con miles de salones de 1 silla hace inviable el esquema o la BD por tenant.</p>
+<h3 id="4-2-aislamiento-en-capas-defensa-en-profundidad">4.2 Aislamiento en capas (defensa en profundidad)</h3>
+<figure class="diagram"><pre class="mermaid">flowchart LR
+  R[Request] --&gt; A[&quot;1 · Autenticación&lt;br/&gt;cookie de sesión&quot;]
+  A --&gt; T[&quot;2 · Resolución del tenant&lt;br/&gt;desde la membresía en sesión,&lt;br/&gt;NUNCA desde header/body&quot;]
+  T --&gt; Z[&quot;3 · Autorización&lt;br/&gt;RBAC + propiedad&quot;]
+  Z --&gt; X[&quot;4 · withTenant(tx)&lt;br/&gt;SET LOCAL app.tenant_id&quot;]
+  X --&gt; DB[&quot;5 · RLS FORCE en PostgreSQL&lt;br/&gt;+ FKs compuestas (tenant_id, id)&quot;]
+  X --&gt; C[&quot;6 · Caché con clave t:{tenant}:…&lt;br/&gt;vía helper único&quot;]
+</pre></figure>
+<p><strong>Datos</strong></p>
+<ul>
+<li>Rol <code>app_runtime</code> <strong>sin</strong> <code>BYPASSRLS</code> y sin ser dueño de las tablas. Las migraciones corren con <code>app_migrator</code>.</li>
+<li><code>ENABLE</code> + <code>FORCE ROW LEVEL SECURITY</code> en toda tabla con <code>tenant_id</code>.</li>
+<li>La política usa <code>NULLIF(current_setting('app.tenant_id', true), '')::uuid</code>. Si el contexto no está fijado, devuelve <strong>cero filas</strong> en lugar de un error o de todo.</li>
+<li><code>SET LOCAL</code> dentro de una transacción por request, compatible con el <em>pooler</em> en modo transacción (PgBouncer de Neon).</li>
+<li><strong>FKs compuestas</strong> <code>(tenant_id, client_id) → crm.clients(tenant_id, id)</code>: aunque alguien desactive RLS, el motor impide referenciar una fila de otro tenant.</li>
+<li>Los procesos de plataforma (backups, métricas globales) usan un rol separado <code>app_platform</code> con <code>BYPASSRLS</code>, solo en el worker, nunca expuesto a HTTP.</li>
+</ul>
+<p><strong>Autorización</strong></p>
+<ul>
+<li><code>TenantContext</code> (tenantId, branchIds, userId, role, staffId) se construye <strong>una vez</strong> en un <em>guard</em> de Nest y se inyecta. Ningún <em>handler</em> lee <code>tenant_id</code> del cliente.</li>
+<li>Cambiar de salón (un usuario puede trabajar en dos) = <code>POST /v1/session/active-tenant</code>; el servidor valida la membresía y rota la sesión.</li>
+<li>La página pública resuelve el tenant por <code>slug</code> y obtiene un contexto <strong>restringido</strong> (<code>role = public</code>). Solo puede consultar disponibilidad y crear <em>holds</em> o citas de esa sucursal.</li>
+</ul>
+<p><strong>Caché</strong></p>
+<ul>
+<li>Al inicio no hay Redis; se usa caché en proceso (LRU) <strong>solo</strong> a través de <code>tenantCache(ctx).get(key)</code>, que antepone <code>t:{tenantId}:</code>. Una regla de ESLint prohíbe importar el cliente de caché directamente.</li>
+<li>La CDN (Cloudflare) cachea solo el contenido público sin datos personales (nombre del salón, servicios, fotos públicas). La disponibilidad lleva <code>Cache-Control: no-store</code> o, como mucho, 15 s con clave por sucursal y fecha.</li>
+</ul>
+<p><strong>Prevención de fugas: controles automáticos en CI</strong></p>
+<ol>
+<li>Prueba de catálogo: falla si alguna tabla con columna <code>tenant_id</code> no tiene <code>relrowsecurity</code> y <code>relforcerowsecurity</code>.</li>
+<li>Suite "dos tenants": genera A y B con datos, ejecuta <strong>cada endpoint</strong> autenticado como A y verifica que no aparece ningún ID de B en la respuesta.</li>
+<li>Prueba sin contexto: una consulta sin <code>SET LOCAL</code> debe devolver 0 filas.</li>
+<li>Los logs y Sentry incluyen siempre <code>tenant_id</code> para detectar respuestas cruzadas.</li>
+</ol>
+<hr />
+</section><section class="chapter"><h2 id="5-stack-tecnol-gico">5. Stack tecnológico</h2>
+<h3 id="5-1-frontend">5.1 Frontend</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Pieza</th>
+<th>Elección</th>
+<th>Descartado y por qué</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Panel (dueño/recepción/estilista)</td>
+<td><strong>React 19 + Vite + TanStack Router + TanStack Query</strong>, <strong>Tailwind + shadcn/ui</strong>, PWA con <code>vite-plugin-pwa</code> (Workbox)</td>
+<td><strong>Next.js</strong>: el App Router y el SSR no aportan nada a una app autenticada offline-first y complican el <em>service worker</em>. <strong>React Native/Flutter</strong>: tienda de apps, dos bases de código, revisiones; la PWA en Android se instala desde el navegador</td>
+</tr>
+<tr>
+<td>Datos offline</td>
+<td><strong>Dexie (IndexedDB)</strong> + outbox de comandos propio (§8)</td>
+<td><strong>RxDB/PouchDB</strong>: modelo documental que choca con el backend relacional. <strong>PowerSync/ElectricSQL</strong>: buena opción si la sincronización propia se vuelve un problema (Fase 2–3), pero agrega costo y una pieza más</td>
+</tr>
+<tr>
+<td>Página pública de reserva</td>
+<td><strong>Astro SSR en Cloudflare Workers</strong> con una isla React para el selector de horario</td>
+<td><strong>SPA</strong>: mal <em>first paint</em> en 3G y sin <em>Open Graph</em> dinámico (la vista previa en WhatsApp/Instagram necesita <code>og:title</code>/<code>og:image</code> renderizados en el servidor). <strong>Next.js en Vercel</strong>: el plan Hobby no permite uso comercial y el Pro cuesta USD 20/usuario</td>
+</tr>
+<tr>
+<td>Formularios y validación</td>
+<td><strong>React Hook Form + Zod</strong>; los esquemas viven en <code>packages/contracts</code> y se comparten con la API</td>
+<td>—</td>
+</tr>
+<tr>
+<td>i18n</td>
+<td><code>es-PE</code> por defecto; formateo con <code>Intl</code> (moneda y zona de la sucursal)</td>
+<td>—</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Objetivos de rendimiento:</strong> página pública con &lt; 60 KB de JS e interactiva en menos de 3 s en "Fast 3G" con un Android de gama baja. Panel instalado como PWA: arranque desde caché en &lt; 1 s.</p>
+<h3 id="5-2-backend-y-api">5.2 Backend y API</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Elección</th>
+<th>Detalle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>NestJS 11 con adaptador Fastify</strong></td>
+<td>Los módulos de Nest corresponden 1:1 a los bounded contexts; <em>guards</em> para tenancy y RBAC; inyección de dependencias que facilita los tests. La estructura es muy guiada, lo que conviene al dev junior</td>
+</tr>
+<tr>
+<td><strong>REST + OpenAPI</strong>, contratos con <strong>ts-rest + Zod</strong></td>
+<td>Tipado de extremo a extremo como tRPC, pero produce un REST estándar consumible por integraciones, por la futura app nativa y por terceros</td>
+</tr>
+<tr>
+<td><strong>Drizzle ORM</strong> para consultas, <strong>SQL a mano</strong> para RLS, <code>EXCLUDE</code> y triggers</td>
+<td>Drizzle permite ejecutar <code>SET LOCAL</code> en la transacción sin trucos; Prisma lo complica con su <em>pool</em> y sus <em>extensions</em></td>
+</tr>
+<tr>
+<td>Tiempo real</td>
+<td><strong>SSE</strong> (<code>/v1/agenda/stream</code>) para cambios en la agenda</td>
+</tr>
+</tbody>
+</table></div>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Descartado</th>
+<th>Razón</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>FastAPI</strong></td>
+<td>Excelente, pero obliga a duplicar los esquemas de validación (Pydantic ↔ Zod) entre la PWA offline y la API y a mantener dos <em>toolchains</em>. Python se reserva para análisis o ML más adelante, si aplica</td>
+</tr>
+<tr>
+<td><strong>Django</strong></td>
+<td>Admin y ORM maduros, pero lo mismo; además el soporte de RLS y async es menos natural</td>
+</tr>
+<tr>
+<td><strong>GraphQL</strong></td>
+<td>Autorización por campo, caché HTTP perdida, problemas N+1 y complejidad sin un cliente que lo necesite</td>
+</tr>
+<tr>
+<td><strong>tRPC</strong></td>
+<td>Acopla el cliente a TypeScript; no sirve como API pública ni para webhooks</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="5-3-base-de-datos-y-migraciones">5.3 Base de datos y migraciones</h3>
+<ul>
+<li><strong>PostgreSQL 17/18 en Neon</strong> (región AWS <code>us-east-1</code>). Branching por <em>pull request</em> para probar migraciones; restauración PITR incluida en el plan de pago. Si se usa PG 18, <code>uuidv7()</code> es nativo; si no, el UUIDv7 se genera en la aplicación (es necesario de todos modos para el modo offline).</li>
+<li><strong>Migraciones:</strong> <code>drizzle-kit generate</code> para el DDL básico más <strong>archivos SQL escritos a mano</strong> para políticas RLS, <code>EXCLUDE</code>, triggers y funciones. Todas versionadas en <code>packages/db/migrations</code>, ejecutadas en CI antes del despliegue con el rol <code>app_migrator</code>.</li>
+<li><strong>Regla <em>expand → migrate → contract</em>:</strong> ninguna migración rompe la versión anterior de la API (columnas nuevas <em>nullable</em>, <em>backfill</em> por job, eliminación en la versión siguiente). Es imprescindible porque hay PWAs offline con versiones viejas.</li>
+<li><strong>Descartados:</strong> <strong>Supabase</strong>. Es muy buena opción (Postgres + Auth + Storage + RLS), pero su plan Pro (USD 25) más PITR (un <em>add-on</em> aparte) cuesta más que Neon, y su enfoque "cliente habla directo con la BD" no encaja con un dominio con invariantes en el servidor. <strong>Cloud SQL o RDS:</strong> mínimo más caro y sin branching.</li>
+</ul>
+<h3 id="5-4-autenticaci-n-y-autorizaci-n">5.4 Autenticación y autorización</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Aspecto</th>
+<th>Decisión</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Librería</td>
+<td><strong>Better Auth</strong> (TypeScript, self-hosted, tablas en nuestro Postgres) con plugin de organizaciones</td>
+</tr>
+<tr>
+<td>Login del personal</td>
+<td>Email + contraseña y <strong>código OTP por WhatsApp</strong> (más usado que el email en el segmento); 2FA opcional para <code>owner</code></td>
+</tr>
+<tr>
+<td>Sesión</td>
+<td><strong>Cookie <code>httpOnly; Secure; SameSite=Lax</code></strong>, sesión en BD, duración de 30 días con renovación deslizante; revocable al instante (despidos de personal)</td>
+</tr>
+<tr>
+<td>Por qué no JWT</td>
+<td>Un JWT de larga duración no se revoca; los JWT cortos con <em>refresh</em> añaden complejidad. Se usan JWT solo para tokens efímeros: enlaces de confirmación y cancelación por WhatsApp, firmados, de un solo uso y válidos 72 h</td>
+</tr>
+<tr>
+<td>Offline</td>
+<td>La PWA conserva la sesión; si expira sin conexión, la app sigue en modo lectura y la caja sigue registrando. Los comandos se sincronizan con el próximo login del <strong>mismo usuario y dispositivo</strong></td>
+</tr>
+<tr>
+<td>Autorización</td>
+<td><strong>RBAC</strong> (<code>owner</code>, <code>admin</code>, <code>receptionist</code>, <code>stylist</code>) <strong>+ reglas de propiedad</strong> (el estilista solo ve sus citas y comisiones; la recepcionista solo las sucursales asignadas). Se implementa como funciones <code>can(ctx, action, resource)</code> por módulo. ABAC completo no se justifica con 4 roles</td>
+</tr>
+<tr>
+<td>Descartados</td>
+<td><strong>Firebase Auth:</strong> el equipo lo conoce, pero las <em>custom claims</em> para el tenant tienen latencia de propagación y el OTP por SMS cuesta dinero. <strong>Auth0/Clerk:</strong> precio por MAU y datos fuera</td>
+</tr>
+</tbody>
+</table></div>
+<p>Matriz de permisos (MVP):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Acción</th>
+<th style="text-align: center;">owner</th>
+<th style="text-align: center;">admin</th>
+<th style="text-align: center;">receptionist</th>
+<th style="text-align: center;">stylist</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Configurar salón, planes y facturación</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+</tr>
+<tr>
+<td>Gestionar personal y comisiones</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+</tr>
+<tr>
+<td>Catálogo y precios</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+</tr>
+<tr>
+<td>Agenda de todos</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">👁 propia</td>
+</tr>
+<tr>
+<td>Cobrar, abrir y cerrar caja</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">❌ (configurable)</td>
+</tr>
+<tr>
+<td>Anular venta</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">❌ (lo solicita)</td>
+<td style="text-align: center;">❌</td>
+</tr>
+<tr>
+<td>Ver notas sensibles del cliente</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">✅ si atiende al cliente</td>
+</tr>
+<tr>
+<td>Reportes de ingresos</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">del día</td>
+<td style="text-align: center;">propias</td>
+</tr>
+<tr>
+<td>Exportar o eliminar datos de clientes (ARCO)</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="5-5-colas-y-tareas-programadas">5.5 Colas y tareas programadas</h3>
+<p><strong><code>pg-boss</code></strong> sobre el mismo Postgres:</p>
+<ul>
+<li><strong>Recordatorios:</strong> al confirmar una cita se encolan jobs con <code>startAfter = starts_at − 24h</code> y <code>− 2h</code>, con <code>singletonKey = reminder:{appointmentId}:{offset}</code>. <strong>Al ejecutarse, el job relee la cita</strong>: si se canceló o se reprogramó, no envía nada. Esto evita cancelar jobs cada vez que algo cambia.</li>
+<li><strong>Otros jobs:</strong> expiración de <em>holds</em> (cada minuto), despacho del outbox, proyecciones de reportes, cierre automático de sesiones abandonadas y backups lógicos nocturnos.</li>
+<li><strong>Reintentos</strong> con <em>backoff</em> exponencial; se guardan en <em>dead letter</em> tras 5 intentos y se alerta (§10).</li>
+<li><strong>Descartados:</strong> <strong>BullMQ</strong> (requiere Redis; Upstash cobra por comando y BullMQ consulta mucho). <strong>Celery</strong> (Python). <strong>Cloud Tasks/SQS</strong> (otro proveedor y otro IAM que administrar). La interfaz <code>JobQueue</code> permite cambiar de backend más adelante.</li>
+</ul>
+<h3 id="5-6-pagos-y-suscripciones">5.6 Pagos y suscripciones</h3>
+<p>Hay <strong>dos flujos de dinero distintos</strong>; no conviene mezclarlos:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Flujo</th>
+<th>MVP</th>
+<th>Fase 2+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>A. El salón cobra a su cliente</strong> (caja)</td>
+<td><strong>Solo registro</strong>: efectivo, Yape, Plin, POS de tarjeta (Izipay/Niubiz físico), transferencia, con N.º de operación opcional. Sin integración: Yape persona a persona no tiene API para comercios pequeños</td>
+<td><strong>Depósitos online</strong> al reservar: Culqi (tarjeta y Yape) o Mercado Pago Checkout Pro. El dinero va a la cuenta <strong>del salón</strong> (credenciales por tenant), nunca a la nuestra. Así no somos agregador de pagos y nos ahorramos regulación y riesgos de contracargos</td>
+</tr>
+<tr>
+<td><strong>B. El salón nos paga la suscripción</strong></td>
+<td><strong>Culqi</strong> con cargos recurrentes a tarjeta <strong>y</strong> pago manual por <strong>Yape/transferencia</strong> (mensual o trimestral con descuento), registrado por <em>webhook</em> o conciliación; <strong>7 días de gracia</strong> antes de pasar a modo solo lectura</td>
+<td>Mercado Pago Suscripciones como alternativa (verificar disponibilidad en Perú); débito automático</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>Stripe se descarta:</strong> no da de alta comercios con entidad peruana. Si más adelante existe una entidad en EE. UU. (LLC) para LATAM, se puede reconsiderar para otros países.</li>
+<li><strong>Comisiones de referencia</strong> (fuentes secundarias, a verificar con Culqi): Yape vía Culqi ≈ 2.99–3.99 %, tarjeta ≈ 3.4–3.99 % + IGV. Indecopi puede considerar publicidad engañosa trasladar la comisión al precio visible.</li>
+<li><strong>Comprobante de nuestra propia suscripción:</strong> emitimos boleta o factura electrónica vía OSE/PSE (Nubefact u otro) desde el día 1 de la facturación real, porque nosotros sí somos contribuyentes con obligación.</li>
+</ul>
+<h3 id="5-7-notificaciones">5.7 Notificaciones</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Canal</th>
+<th>Uso</th>
+<th>Proveedor</th>
+<th>Decisión</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>WhatsApp (automático)</strong></td>
+<td>Confirmación, recordatorio 24 h/2 h con botones, aviso de turno en cola, oferta de la lista de espera</td>
+<td><strong>WhatsApp Cloud API directa de Meta</strong></td>
+<td>Sin intermediarios (Twilio y 360dialog cobran encima de Meta). En el MVP, <strong>un número de la plataforma</strong> con el nombre del salón en la plantilla. En la Fase 2, <strong>número propio por salón</strong> vía <em>Embedded Signup</em> como <em>Tech Provider</em></td>
+</tr>
+<tr>
+<td><strong>WhatsApp (manual, <code>wa.me</code>)</strong></td>
+<td>Plan gratis y respaldo si falla la API</td>
+<td>Deep link</td>
+<td>Costo cero; mensaje prellenado que envía la recepcionista desde su propio WhatsApp</td>
+</tr>
+<tr>
+<td><strong>Email</strong></td>
+<td>Recibos, restablecer contraseña, reportes semanales al dueño</td>
+<td><strong>Resend</strong> (o Amazon SES al crecer)</td>
+<td>Plan gratis de ~3 000 emails/mes</td>
+</tr>
+<tr>
+<td><strong>SMS</strong></td>
+<td>Solo respaldo opcional en planes altos</td>
+<td>Proveedor local o Twilio</td>
+<td>Caro y con poca lectura; no se incluye en el MVP</td>
+</tr>
+<tr>
+<td><strong>Push (personal)</strong></td>
+<td>"Nueva reserva online"</td>
+<td>Web Push con VAPID (Fase 1, Android); FCM opcional</td>
+<td>iOS solo soporta push en PWA instalada (16.4+)</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Reglas de Meta que condicionan el diseño:</strong></p>
+<ul>
+<li>Los mensajes iniciados por el negocio fuera de la ventana de 24 h requieren <strong>plantillas aprobadas</strong>. Los recordatorios son categoría <strong>utility</strong>, que es más barata. Las plantillas <em>utility</em> enviadas <strong>dentro</strong> de una ventana abierta de atención al cliente no se cobran. Meta puede <strong>reclasificar</strong> a <em>marketing</em> una plantilla con tono promocional, así que hay que mantenerlas estrictamente transaccionales.</li>
+<li>Meta solo cambia sus tarifas el primer día de cada trimestre. <strong>El precio por mensaje para Perú no se pudo verificar</strong>; supuesto de trabajo: USD 0.01–0.03 por plantilla <em>utility</em>. Esto entra en el modelo de precios como <strong>cuota de mensajes por plan</strong>, con límite duro en el plan gratis.</li>
+<li>Cada envío se registra en <code>notifications.message_log</code> (estado, costo y ID del proveedor) para conocer el costo real por tenant.</li>
+</ul>
+<h3 id="5-8-almacenamiento-de-archivos">5.8 Almacenamiento de archivos</h3>
+<ul>
+<li><strong>Cloudflare R2</strong> (compatible con S3, <strong>sin costo de egress</strong>), un bucket privado.</li>
+<li>Claves: <code>t/{tenantId}/clients/{clientId}/photos/{uuid}.webp</code>. Toda URL es <strong>prefirmada</strong> y de vida corta (5 min), generada por la API tras verificar permisos. Nunca se exponen URLs públicas de fotos de clientes.</li>
+<li>Compresión <strong>en el cliente</strong> antes de subir (WebP, máximo 1600 px): ahorra datos móviles y almacenamiento.</li>
+<li>Fotos de "portafolio" público (trabajos del salón): bucket o prefijo público aparte, servido por la CDN, <strong>solo con consentimiento explícito de la clienta</strong> para la finalidad "publicación" (§9).</li>
+<li>Descartados: <strong>Firebase Storage/GCS/S3</strong>, por el costo de egress y por mezclar proveedores sin necesidad.</li>
+</ul>
+<h3 id="5-9-observabilidad-detalle-en-10">5.9 Observabilidad (detalle en §10)</h3>
+<p><strong>Sentry</strong> (errores de frontend y backend, <em>performance</em>, <em>releases</em>), <strong>Better Stack</strong> (logs estructurados, uptime, alertas, <em>status page</em>) y <strong>pino</strong> para logs JSON con <code>request_id</code>, <code>tenant_id</code>, <code>user_id</code> y <code>module</code>. Se instrumenta con <strong>OpenTelemetry</strong> desde el inicio para que cambiar de backend (Grafana Cloud o Honeycomb) sea configuración y no código.</p>
+<h3 id="5-10-hosting-ci-cd-y-costo">5.10 Hosting, CI/CD y costo</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Componente</th>
+<th>Servicio</th>
+<th>Costo mensual estimado (USD)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>API (1 instancia, 2 GB)</td>
+<td>Render Web Service "Standard" (Virginia)</td>
+<td>25</td>
+</tr>
+<tr>
+<td>Worker</td>
+<td>Render Background Worker "Starter"</td>
+<td>7</td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>Neon "Launch" (consumo; PITR de 7 días)</td>
+<td>15–25</td>
+</tr>
+<tr>
+<td>Panel PWA (estáticos)</td>
+<td>Cloudflare Pages</td>
+<td>0</td>
+</tr>
+<tr>
+<td>Página pública (Astro SSR)</td>
+<td>Cloudflare Workers (plan gratis; 5 USD si se superan los límites)</td>
+<td>0–5</td>
+</tr>
+<tr>
+<td>Archivos y backups</td>
+<td>Cloudflare R2 (10 GB gratis)</td>
+<td>0–2</td>
+</tr>
+<tr>
+<td>Email</td>
+<td>Resend (plan gratis)</td>
+<td>0</td>
+</tr>
+<tr>
+<td>Errores</td>
+<td>Sentry Developer (gratis)</td>
+<td>0</td>
+</tr>
+<tr>
+<td>Logs, uptime y alertas</td>
+<td>Better Stack (plan gratis)</td>
+<td>0</td>
+</tr>
+<tr>
+<td>Dominio <code>.pe</code>/<code>.com</code></td>
+<td>—</td>
+<td>~2</td>
+</tr>
+<tr>
+<td><strong>Subtotal infraestructura</strong></td>
+<td></td>
+<td><strong>≈ 50–66</strong></td>
+</tr>
+<tr>
+<td>WhatsApp</td>
+<td>Meta, por mensaje (se traslada al precio del plan)</td>
+<td>Variable</td>
+</tr>
+</tbody>
+</table></div>
+<p><em>Los precios son una referencia; verifícalos al contratar. Margen respecto del tope de 100 USD: ~35 USD para un staging (Neon branch + Render Starter, ~10 USD).</em></p>
+<p><strong>Por qué Render y no otras opciones:</strong> Railway es similar, aunque su precio por consumo es menos predecible. Fly.io exige más trabajo de operaciones. Un <strong>VPS Hetzner/DO</strong> es más barato (~10 USD), pero alguien tiene que parchear el sistema operativo, gestionar los backups y la seguridad, y ese "alguien" no existe en este equipo. <strong>Cloud Run</strong> es razonable, aunque tiene arranques en frío o un costo mínimo por instancia, además del IAM de GCP. <strong>Región <code>us-east</code>:</strong> la latencia desde Lima ronda los 70–110 ms, en un rango comparable a São Paulo y con más servicios y menor costo.</p>
+<p><strong>Entornos y CI/CD (GitHub Actions):</strong></p>
+<figure class="diagram"><pre class="mermaid">flowchart LR
+  PR[&quot;Pull Request&quot;] --&gt; CI[&quot;CI: lint · typecheck · unit&lt;br/&gt;integration con Postgres en contenedor&lt;br/&gt;suite de aislamiento de tenants&lt;br/&gt;gitleaks · audit&quot;]
+  CI --&gt; PREV[&quot;Preview: Neon branch +&lt;br/&gt;Cloudflare Pages preview&quot;]
+  PREV --&gt; MAIN[&quot;merge a main&quot;]
+  MAIN --&gt; MIG[&quot;migraciones (app_migrator)&lt;br/&gt;en staging&quot;] --&gt; STG[&quot;deploy staging + smoke e2e (Playwright)&quot;]
+  STG --&gt; GATE{&quot;aprobación manual&lt;br/&gt;(tag v*)&quot;}
+  GATE --&gt; PMIG[&quot;migraciones prod&quot;] --&gt; PROD[&quot;deploy prod&lt;br/&gt;Render zero-downtime&quot;]
+  PROD --&gt; SM[&quot;smoke + Sentry release&quot;]
+</pre></figure>
+<ul>
+<li><em>Trunk-based</em>, PRs pequeños y <em>feature flags</em> simples (tabla <code>platform.feature_flags</code> por tenant) para lanzar funciones a salones piloto.</li>
+<li><strong>Despliegues a producción de lunes a jueves, de 9 a 16 h hora Lima</strong>, nunca en la víspera de un fin de semana (sábado es el día de más actividad de los salones).</li>
+</ul>
+<hr />
+</section><section class="chapter"><h2 id="6-modelo-de-datos">6. Modelo de datos</h2>
+<h3 id="6-1-diagrama-entidad-relaci-n-simplificado">6.1 Diagrama entidad-relación (simplificado)</h3>
+<figure class="diagram"><pre class="mermaid">erDiagram
+  TENANT ||--o{ BRANCH : tiene
+  TENANT ||--o{ MEMBERSHIP : &quot;da acceso&quot;
+  USER ||--o{ MEMBERSHIP : tiene
+  BRANCH ||--o{ STAFF : emplea
+  STAFF ||--o{ WORKING_HOURS : &quot;plantilla semanal&quot;
+  STAFF ||--o{ STAFF_DAY_OVERRIDE : excepciones
+  STAFF ||--o{ STAFF_SERVICE : &quot;puede hacer&quot;
+  SERVICE ||--o{ STAFF_SERVICE : &quot;&quot;
+  CLIENT ||--o{ APPOINTMENT : reserva
+  APPOINTMENT ||--|{ STAFF_BOOKING : &quot;ocupa (líneas)&quot;
+  STAFF ||--o{ STAFF_BOOKING : &quot;ocupado en&quot;
+  SERVICE ||--o{ STAFF_BOOKING : &quot;&quot;
+  BRANCH ||--o{ CASH_SESSION : &quot;&quot;
+  CASH_SESSION ||--o{ SALE : &quot;&quot;
+  SALE ||--|{ SALE_ITEM : &quot;&quot;
+  SALE ||--|{ PAYMENT : &quot;&quot;
+  SALE_ITEM ||--o{ COMMISSION_ENTRY : genera
+  CLIENT ||--o{ CLIENT_CONSENT : &quot;&quot;
+  CLIENT ||--o{ CLIENT_NOTE : &quot;&quot;
+  CLIENT ||--o{ WAITLIST_ENTRY : &quot;&quot;
+</pre></figure>
+<h3 id="6-2-ddl-de-postgresql-n-cleo-del-mvp">6.2 DDL de PostgreSQL (núcleo del MVP)</h3>
+<pre><code class="language-sql">-- =====================================================================
+-- 0001_foundation.sql  (se ejecuta con app_migrator)
+-- =====================================================================
+CREATE EXTENSION IF NOT EXISTS btree_gist;   -- EXCLUDE con '=' sobre uuid
+CREATE EXTENSION IF NOT EXISTS citext;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;      -- búsqueda de clientes por nombre
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+CREATE SCHEMA core; CREATE SCHEMA catalog; CREATE SCHEMA crm; CREATE SCHEMA agenda;
+CREATE SCHEMA pos; CREATE SCHEMA commissions; CREATE SCHEMA notifications; CREATE SCHEMA platform;
+
+-- Rol de runtime: NO es dueño de las tablas, NO tiene BYPASSRLS
+-- CREATE ROLE app_runtime LOGIN PASSWORD '...' NOBYPASSRLS;
+
+-- Contexto de tenant: NULL si no está fijado ⇒ las políticas devuelven 0 filas
+CREATE FUNCTION core.current_tenant() RETURNS uuid
+LANGUAGE sql STABLE AS $$
+  SELECT NULLIF(current_setting('app.tenant_id', true), '')::uuid
+$$;
+
+-- Versión monotónica para sincronización offline (pull incremental)
+CREATE SEQUENCE platform.sync_seq;
+CREATE FUNCTION platform.bump_row_version() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+  NEW.row_version := nextval('platform.sync_seq');
+  NEW.updated_at  := now();
+  RETURN NEW;
+END $$;
+
+-- =====================================================================
+-- Identidad y Tenancy
+-- =====================================================================
+CREATE TABLE core.tenants (
+  id            uuid PRIMARY KEY,
+  slug          citext NOT NULL UNIQUE,
+  name          text   NOT NULL,
+  country_code  char(2) NOT NULL DEFAULT 'PE',
+  tax_id        varchar(20),                 -- RUC en Perú
+  plan_code     text NOT NULL DEFAULT 'free',
+  status        text NOT NULL DEFAULT 'active'
+                CHECK (status IN ('active','grace','read_only','suspended','deleted')),
+  created_at    timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE core.branches (
+  id               uuid PRIMARY KEY,
+  tenant_id        uuid NOT NULL REFERENCES core.tenants(id),
+  name             text NOT NULL,
+  booking_slug     citext NOT NULL,
+  timezone         text NOT NULL DEFAULT 'America/Lima',   -- IANA, nunca un offset fijo
+  currency         char(3) NOT NULL DEFAULT 'PEN',
+  slot_step_min    smallint NOT NULL DEFAULT 15 CHECK (slot_step_min IN (5,10,15,20,30)),
+  cancel_min_hours smallint NOT NULL DEFAULT 2,
+  address          text,
+  phone_e164       varchar(16),
+  settings         jsonb NOT NULL DEFAULT '{}',
+  row_version      bigint NOT NULL DEFAULT 0,
+  created_at       timestamptz NOT NULL DEFAULT now(),
+  updated_at       timestamptz NOT NULL DEFAULT now(),
+  deleted_at       timestamptz,
+  UNIQUE (tenant_id, id),
+  UNIQUE (booking_slug)
+);
+
+CREATE TABLE core.users (               -- identidad global (una persona, varios salones)
+  id          uuid PRIMARY KEY,
+  email       citext UNIQUE,
+  phone_e164  varchar(16) UNIQUE,
+  full_name   text NOT NULL,
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+-- (Las tablas de sesión/credenciales las crea Better Auth en el esquema 'auth'.)
+
+CREATE TABLE core.memberships (
+  tenant_id   uuid NOT NULL REFERENCES core.tenants(id),
+  user_id     uuid NOT NULL REFERENCES core.users(id),
+  role        text NOT NULL CHECK (role IN ('owner','admin','receptionist','stylist')),
+  branch_ids  uuid[],                      -- NULL = todas las sucursales
+  status      text NOT NULL DEFAULT 'active' CHECK (status IN ('invited','active','revoked')),
+  created_at  timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (tenant_id, user_id)
+);
+
+-- =====================================================================
+-- Catálogo
+-- =====================================================================
+CREATE TABLE catalog.services (
+  id               uuid PRIMARY KEY,
+  tenant_id        uuid NOT NULL REFERENCES core.tenants(id),
+  name             text NOT NULL,
+  category         text,
+  duration_min     smallint NOT NULL CHECK (duration_min &gt; 0 AND duration_min % 5 = 0),
+  buffer_after_min smallint NOT NULL DEFAULT 0 CHECK (buffer_after_min &gt;= 0),
+  price_cents      integer NOT NULL CHECK (price_cents &gt;= 0),  -- dinero SIEMPRE en céntimos
+  bookable_online  boolean NOT NULL DEFAULT true,
+  active           boolean NOT NULL DEFAULT true,
+  row_version      bigint NOT NULL DEFAULT 0,
+  updated_at       timestamptz NOT NULL DEFAULT now(),
+  deleted_at       timestamptz,
+  UNIQUE (tenant_id, id)
+);
+
+-- =====================================================================
+-- Agenda: personal y horarios
+-- =====================================================================
+CREATE TABLE agenda.staff (
+  id            uuid PRIMARY KEY,
+  tenant_id     uuid NOT NULL,
+  branch_id     uuid NOT NULL,
+  user_id       uuid REFERENCES core.users(id),   -- puede no tener login
+  display_name  text NOT NULL,
+  color         char(7) NOT NULL DEFAULT '#6366F1',
+  bookable_online boolean NOT NULL DEFAULT true,
+  active        boolean NOT NULL DEFAULT true,
+  row_version   bigint NOT NULL DEFAULT 0,
+  updated_at    timestamptz NOT NULL DEFAULT now(),
+  deleted_at    timestamptz,
+  UNIQUE (tenant_id, id),
+  FOREIGN KEY (tenant_id, branch_id) REFERENCES core.branches(tenant_id, id)
+);
+
+CREATE TABLE agenda.staff_services (
+  tenant_id            uuid NOT NULL,
+  staff_id             uuid NOT NULL,
+  service_id           uuid NOT NULL,
+  duration_override_min smallint CHECK (duration_override_min &gt; 0),
+  price_override_cents  integer CHECK (price_override_cents &gt;= 0),
+  PRIMARY KEY (tenant_id, staff_id, service_id),
+  FOREIGN KEY (tenant_id, staff_id)   REFERENCES agenda.staff(tenant_id, id),
+  FOREIGN KEY (tenant_id, service_id) REFERENCES catalog.services(tenant_id, id)
+);
+
+-- Plantilla semanal en HORA LOCAL de la sucursal (no UTC): &quot;lunes 09:00–13:00&quot;
+CREATE TABLE agenda.working_hours (
+  id          uuid PRIMARY KEY,
+  tenant_id   uuid NOT NULL,
+  staff_id    uuid NOT NULL,
+  weekday     smallint NOT NULL CHECK (weekday BETWEEN 1 AND 7),   -- ISO: 1 = lunes
+  start_local time NOT NULL,
+  end_local   time NOT NULL,
+  valid_from  date NOT NULL DEFAULT current_date,
+  valid_to    date,
+  CHECK (start_local &lt; end_local),
+  FOREIGN KEY (tenant_id, staff_id) REFERENCES agenda.staff(tenant_id, id)
+);
+
+-- Excepciones por fecha: día libre, feriado o horario especial
+CREATE TABLE agenda.staff_day_overrides (
+  id          uuid PRIMARY KEY,
+  tenant_id   uuid NOT NULL,
+  staff_id    uuid NOT NULL,
+  on_date     date NOT NULL,
+  is_off      boolean NOT NULL DEFAULT false,
+  start_local time,
+  end_local   time,
+  reason      text,
+  CHECK (is_off OR (start_local IS NOT NULL AND end_local IS NOT NULL AND start_local &lt; end_local)),
+  FOREIGN KEY (tenant_id, staff_id) REFERENCES agenda.staff(tenant_id, id)
+);
+
+-- =====================================================================
+-- Clientes (CRM)
+-- =====================================================================
+CREATE TABLE crm.clients (
+  id             uuid PRIMARY KEY,
+  tenant_id      uuid NOT NULL REFERENCES core.tenants(id),
+  full_name      text NOT NULL,
+  phone_e164     varchar(16),
+  email          citext,
+  birth_date     date,
+  doc_type       text CHECK (doc_type IN ('DNI','CE','PAS','RUC')),
+  doc_number     varchar(20),
+  no_show_count  smallint NOT NULL DEFAULT 0,
+  source         text,                          -- walk_in, instagram, referido…
+  row_version    bigint NOT NULL DEFAULT 0,
+  created_at     timestamptz NOT NULL DEFAULT now(),
+  updated_at     timestamptz NOT NULL DEFAULT now(),
+  deleted_at     timestamptz,                   -- soft delete; borrado definitivo por ARCO = job
+  UNIQUE (tenant_id, id)
+);
+CREATE UNIQUE INDEX clients_phone_uq ON crm.clients (tenant_id, phone_e164)
+  WHERE deleted_at IS NULL AND phone_e164 IS NOT NULL;                            -- I14
+CREATE INDEX clients_name_trgm ON crm.clients USING gin (full_name gin_trgm_ops);
+
+CREATE TABLE crm.client_notes (
+  id             uuid PRIMARY KEY,
+  tenant_id      uuid NOT NULL,
+  client_id      uuid NOT NULL,
+  author_user_id uuid NOT NULL,
+  is_sensitive   boolean NOT NULL DEFAULT false,  -- alergias, embarazo, condición del cuero cabelludo
+  body           text,                            -- solo si NO es sensible
+  body_cipher    bytea,                           -- AES-256-GCM en la app si es sensible
+  key_version    smallint,
+  created_at     timestamptz NOT NULL DEFAULT now(),
+  CHECK ((is_sensitive AND body IS NULL AND body_cipher IS NOT NULL)
+      OR (NOT is_sensitive AND body IS NOT NULL AND body_cipher IS NULL)),          -- I16
+  FOREIGN KEY (tenant_id, client_id) REFERENCES crm.clients(tenant_id, id)
+);
+
+CREATE TABLE crm.client_consents (                 -- Ley 29733: consentimiento por finalidad
+  id              uuid PRIMARY KEY,
+  tenant_id       uuid NOT NULL,
+  client_id       uuid NOT NULL,
+  purpose         text NOT NULL CHECK (purpose IN ('service','reminders','marketing','photos_internal','photos_public','sensitive_data')),
+  granted         boolean NOT NULL,
+  channel         text NOT NULL CHECK (channel IN ('online_form','in_person','whatsapp')),
+  policy_version  text NOT NULL,
+  recorded_by     uuid,
+  recorded_at     timestamptz NOT NULL DEFAULT now(),
+  FOREIGN KEY (tenant_id, client_id) REFERENCES crm.clients(tenant_id, id)
+);   -- append-only: el estado vigente es el último registro por (client, purpose)
+
+-- =====================================================================
+-- Agenda: citas y ocupaciones
+-- =====================================================================
+CREATE TABLE agenda.appointments (
+  id              uuid PRIMARY KEY,               -- UUIDv7 (puede generarse offline)
+  tenant_id       uuid NOT NULL,
+  branch_id       uuid NOT NULL,
+  client_id       uuid,                           -- NULL permitido en un walk-in rápido
+  status          text NOT NULL CHECK (status IN
+                  ('held','confirmed','checked_in','completed','cancelled','no_show','conflict')),
+  source          text NOT NULL CHECK (source IN ('reception','public','offline','waitlist','walk_in')),
+  starts_at       timestamptz NOT NULL,
+  ends_at         timestamptz NOT NULL,
+  hold_expires_at timestamptz,
+  notes           text,
+  cancel_reason   text,
+  cancelled_at    timestamptz,
+  cancelled_by    text CHECK (cancelled_by IN ('client','staff','system')),
+  created_by      uuid,
+  row_version     bigint NOT NULL DEFAULT 0,
+  created_at      timestamptz NOT NULL DEFAULT now(),
+  updated_at      timestamptz NOT NULL DEFAULT now(),
+  CHECK (starts_at &lt; ends_at),
+  CHECK (status &lt;&gt; 'held' OR hold_expires_at IS NOT NULL),
+  UNIQUE (tenant_id, id),
+  FOREIGN KEY (tenant_id, branch_id) REFERENCES core.branches(tenant_id, id),
+  FOREIGN KEY (tenant_id, client_id) REFERENCES crm.clients(tenant_id, id)
+);
+CREATE INDEX appt_branch_day ON agenda.appointments (tenant_id, branch_id, starts_at);
+CREATE INDEX appt_client     ON agenda.appointments (tenant_id, client_id, starts_at DESC);
+CREATE INDEX appt_sync       ON agenda.appointments (tenant_id, row_version);
+
+-- Una fila = un intervalo en que un estilista está ocupado.
+-- Cubre líneas de servicio, bloqueos (almuerzo, trámite) y holds de la reserva pública.
+CREATE TABLE agenda.staff_bookings (
+  id              uuid PRIMARY KEY,
+  tenant_id       uuid NOT NULL,
+  branch_id       uuid NOT NULL,
+  staff_id        uuid NOT NULL,
+  kind            text NOT NULL CHECK (kind IN ('service','block','hold')),
+  appointment_id  uuid,
+  service_id      uuid,
+  period          tstzrange NOT NULL,             -- '[start, end)' semiabierto: citas contiguas OK
+  price_cents     integer,                        -- snapshot al reservar
+  active          boolean NOT NULL DEFAULT true,  -- false = cancelada / hold expirado
+  expires_at      timestamptz,                    -- solo para 'hold'
+  label           text,                           -- 'Almuerzo', 'Curso'…
+  row_version     bigint NOT NULL DEFAULT 0,
+  updated_at      timestamptz NOT NULL DEFAULT now(),
+  CHECK (NOT isempty(period) AND lower_inc(period) AND NOT upper_inc(period)),
+  CHECK ((kind = 'block') = (appointment_id IS NULL)),
+  CHECK (kind &lt;&gt; 'hold' OR expires_at IS NOT NULL),
+  FOREIGN KEY (tenant_id, staff_id)       REFERENCES agenda.staff(tenant_id, id),
+  FOREIGN KEY (tenant_id, appointment_id) REFERENCES agenda.appointments(tenant_id, id),
+  FOREIGN KEY (tenant_id, service_id)     REFERENCES catalog.services(tenant_id, id),
+
+  -- I1: un estilista no puede tener dos ocupaciones activas que se solapen
+  CONSTRAINT no_overlap_per_staff EXCLUDE USING gist (
+    tenant_id WITH =, staff_id WITH =, period WITH &amp;&amp;
+  ) WHERE (active)
+);
+CREATE INDEX sb_branch_period ON agenda.staff_bookings USING gist (tenant_id, branch_id, period) WHERE active;
+CREATE INDEX sb_appt          ON agenda.staff_bookings (tenant_id, appointment_id);
+CREATE INDEX sb_holds_expiry  ON agenda.staff_bookings (expires_at) WHERE kind = 'hold' AND active;
+
+CREATE TABLE agenda.waitlist_entries (
+  id            uuid PRIMARY KEY,
+  tenant_id     uuid NOT NULL,
+  branch_id     uuid NOT NULL,
+  client_id     uuid NOT NULL,
+  service_id    uuid NOT NULL,
+  staff_id      uuid,                      -- NULL = cualquier estilista
+  desired       tstzrange NOT NULL,        -- p. ej. sábado 10:00–14:00
+  status        text NOT NULL DEFAULT 'waiting'
+                CHECK (status IN ('waiting','offered','booked','expired','cancelled')),
+  offered_at    timestamptz,
+  offer_expires_at timestamptz,
+  created_at    timestamptz NOT NULL DEFAULT now(),
+  FOREIGN KEY (tenant_id, client_id) REFERENCES crm.clients(tenant_id, id)
+);
+CREATE INDEX wl_match ON agenda.waitlist_entries USING gist (tenant_id, branch_id, desired) WHERE status = 'waiting';
+
+-- =====================================================================
+-- Caja y Pagos
+-- =====================================================================
+CREATE TABLE pos.cash_sessions (
+  id                   uuid PRIMARY KEY,
+  tenant_id            uuid NOT NULL,
+  branch_id            uuid NOT NULL,
+  device_id            text NOT NULL,
+  opened_by            uuid NOT NULL,
+  opened_at            timestamptz NOT NULL,
+  opening_float_cents  integer NOT NULL DEFAULT 0,
+  closed_by            uuid,
+  closed_at            timestamptz,
+  expected_cash_cents  integer,
+  counted_cash_cents   integer,
+  status               text NOT NULL DEFAULT 'open' CHECK (status IN ('open','closed')),
+  UNIQUE (tenant_id, id),
+  FOREIGN KEY (tenant_id, branch_id) REFERENCES core.branches(tenant_id, id)
+);
+CREATE UNIQUE INDEX one_open_session_per_device
+  ON pos.cash_sessions (tenant_id, branch_id, device_id) WHERE status = 'open';   -- I6
+
+CREATE TABLE pos.sales (
+  id                uuid PRIMARY KEY,      -- generado en el cliente ⇒ idempotencia natural (I11)
+  tenant_id         uuid NOT NULL,
+  branch_id         uuid NOT NULL,
+  cash_session_id   uuid NOT NULL,
+  client_id         uuid,
+  appointment_id    uuid,
+  number            integer,               -- correlativo por sucursal, asignado AL SINCRONIZAR
+  status            text NOT NULL CHECK (status IN ('closed','voided')),
+  subtotal_cents    integer NOT NULL,
+  discount_cents    integer NOT NULL DEFAULT 0,
+  total_cents       integer NOT NULL CHECK (total_cents &gt;= 0),
+  closed_at         timestamptz NOT NULL,  -- hora del dispositivo (dato de negocio)
+  received_at       timestamptz NOT NULL DEFAULT now(),  -- hora del servidor
+  closed_by         uuid NOT NULL,
+  created_offline   boolean NOT NULL DEFAULT false,
+  device_id         text NOT NULL,
+  void_of_reason    text,
+  voided_at         timestamptz,
+  voided_by         uuid,
+  row_version       bigint NOT NULL DEFAULT 0,
+  UNIQUE (tenant_id, id),
+  FOREIGN KEY (tenant_id, cash_session_id) REFERENCES pos.cash_sessions(tenant_id, id),
+  FOREIGN KEY (tenant_id, appointment_id)  REFERENCES agenda.appointments(tenant_id, id)
+);
+CREATE INDEX sales_branch_day ON pos.sales (tenant_id, branch_id, closed_at);
+
+CREATE TABLE pos.sale_items (
+  id                uuid PRIMARY KEY,
+  tenant_id         uuid NOT NULL,
+  sale_id           uuid NOT NULL,
+  kind              text NOT NULL CHECK (kind IN ('service','product','tip','other')),
+  service_id        uuid,
+  staff_id          uuid,                  -- quién realizó el servicio (base de la comisión)
+  description       text NOT NULL,         -- snapshot del nombre
+  qty               smallint NOT NULL DEFAULT 1 CHECK (qty &gt; 0),
+  unit_price_cents  integer NOT NULL,      -- snapshot del precio (I10)
+  discount_cents    integer NOT NULL DEFAULT 0,
+  total_cents       integer NOT NULL,
+  UNIQUE (tenant_id, id),
+  FOREIGN KEY (tenant_id, sale_id) REFERENCES pos.sales(tenant_id, id)
+);
+
+CREATE TABLE pos.payments (
+  id            uuid PRIMARY KEY,
+  tenant_id     uuid NOT NULL,
+  sale_id       uuid NOT NULL,
+  method        text NOT NULL CHECK (method IN ('cash','yape','plin','card_pos','transfer','culqi','mercadopago','other')),
+  amount_cents  integer NOT NULL CHECK (amount_cents &gt; 0),
+  reference     text,                      -- N.º de operación Yape/Plin, últimos 4 dígitos
+  FOREIGN KEY (tenant_id, sale_id) REFERENCES pos.sales(tenant_id, id)
+);
+-- I9 (Σ pagos = total) se valida en el comando CloseSale dentro de la misma transacción.
+
+CREATE TABLE pos.cash_movements (           -- egresos/ingresos manuales: compra de insumos, vuelto
+  id               uuid PRIMARY KEY,
+  tenant_id        uuid NOT NULL,
+  cash_session_id  uuid NOT NULL,
+  direction        text NOT NULL CHECK (direction IN ('in','out')),
+  amount_cents     integer NOT NULL CHECK (amount_cents &gt; 0),
+  reason           text NOT NULL,
+  created_by       uuid NOT NULL,
+  created_at       timestamptz NOT NULL,
+  FOREIGN KEY (tenant_id, cash_session_id) REFERENCES pos.cash_sessions(tenant_id, id)
+);
+
+-- =====================================================================
+-- Comisiones
+-- =====================================================================
+CREATE TABLE commissions.rules (
+  id          uuid PRIMARY KEY,
+  tenant_id   uuid NOT NULL,
+  staff_id    uuid,                 -- NULL = todos
+  service_id  uuid,                 -- NULL = todos los servicios
+  type        text NOT NULL CHECK (type IN ('percent','fixed')),
+  value       numeric(10,2) NOT NULL CHECK (value &gt;= 0),   -- % o céntimos
+  applies_to  text NOT NULL DEFAULT 'service' CHECK (applies_to IN ('service','product','tip')),
+  valid_from  date NOT NULL,
+  valid_to    date
+);
+-- Resolución: staff+service &gt; staff &gt; service &gt; tenant (la regla más específica gana)
+
+CREATE TABLE commissions.entries (            -- append-only (I12)
+  id            uuid PRIMARY KEY,
+  tenant_id     uuid NOT NULL,
+  staff_id      uuid NOT NULL,
+  sale_item_id  uuid NOT NULL,
+  rule_id       uuid,
+  base_cents    integer NOT NULL,
+  amount_cents  integer NOT NULL,             -- negativo si es reverso por anulación
+  earned_on     date NOT NULL,                -- fecha local de la sucursal
+  settlement_id uuid,
+  created_at    timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (tenant_id, sale_item_id, amount_cents)   -- evita duplicar al reprocesar un evento
+);
+CREATE INDEX comm_staff_period ON commissions.entries (tenant_id, staff_id, earned_on);
+
+-- =====================================================================
+-- Plataforma: outbox, idempotencia, auditoría, mensajes
+-- =====================================================================
+CREATE TABLE platform.outbox (
+  id           bigserial PRIMARY KEY,
+  tenant_id    uuid NOT NULL,
+  event_type   text NOT NULL,              -- 'agenda.AppointmentConfirmed.v1'
+  payload      jsonb NOT NULL,
+  occurred_at  timestamptz NOT NULL DEFAULT now(),
+  published_at timestamptz
+);
+CREATE INDEX outbox_pending ON platform.outbox (id) WHERE published_at IS NULL;
+
+CREATE TABLE platform.idempotency_keys (
+  tenant_id       uuid NOT NULL,
+  key             text NOT NULL,
+  request_hash    text NOT NULL,           -- misma clave + otro cuerpo ⇒ 422
+  response_status smallint,
+  response_body   jsonb,
+  created_at      timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (tenant_id, key)
+);   -- se purga después de 72 h
+
+CREATE TABLE platform.audit_log (
+  id            bigserial PRIMARY KEY,
+  tenant_id     uuid NOT NULL,
+  actor_user_id uuid,
+  actor_role    text,
+  action        text NOT NULL,             -- 'client.note.read_sensitive', 'sale.void'…
+  entity        text NOT NULL,
+  entity_id     uuid,
+  changes       jsonb,                     -- diff SIN datos sensibles en claro
+  ip            inet,
+  user_agent    text,
+  at            timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX audit_tenant_at ON platform.audit_log (tenant_id, at DESC);
+-- REVOKE UPDATE, DELETE ON platform.audit_log FROM app_runtime;   -- append-only
+
+CREATE TABLE notifications.message_log (
+  id                  uuid PRIMARY KEY,
+  tenant_id           uuid NOT NULL,
+  client_id           uuid,
+  appointment_id      uuid,
+  channel             text NOT NULL CHECK (channel IN ('whatsapp','email','sms','push')),
+  template            text NOT NULL,
+  status              text NOT NULL CHECK (status IN ('queued','sent','delivered','read','failed','skipped')),
+  provider_message_id text,
+  cost_micros_usd     integer,
+  error               text,
+  created_at          timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX msg_tenant_month ON notifications.message_log (tenant_id, created_at);
+CREATE UNIQUE INDEX msg_provider_id ON notifications.message_log (provider_message_id) WHERE provider_message_id IS NOT NULL;
+</code></pre>
+<p><strong>Plantilla RLS aplicada a todas las tablas con <code>tenant_id</code></strong> (generada por un script de migración para que nadie la olvide):</p>
+<pre><code class="language-sql">DO $$
+DECLARE r record;
+BEGIN
+  FOR r IN
+    SELECT table_schema, table_name FROM information_schema.columns
+    WHERE column_name = 'tenant_id'
+      AND table_schema IN ('core','catalog','crm','agenda','pos','commissions','notifications','platform')
+  LOOP
+    EXECUTE format('ALTER TABLE %I.%I ENABLE ROW LEVEL SECURITY', r.table_schema, r.table_name);
+    EXECUTE format('ALTER TABLE %I.%I FORCE ROW LEVEL SECURITY',  r.table_schema, r.table_name);
+    EXECUTE format($p$CREATE POLICY tenant_isolation ON %I.%I
+                     USING (tenant_id = core.current_tenant())
+                     WITH CHECK (tenant_id = core.current_tenant())$p$, r.table_schema, r.table_name);
+  END LOOP;
+END $$;
+
+-- Triggers de row_version en las tablas sincronizables
+CREATE TRIGGER t_rv BEFORE INSERT OR UPDATE ON agenda.appointments
+  FOR EACH ROW EXECUTE FUNCTION platform.bump_row_version();
+-- … igual en agenda.staff_bookings, agenda.staff, catalog.services, crm.clients, core.branches, pos.sales
+</code></pre>
+<p><strong>Uso desde la aplicación (TypeScript):</strong></p>
+<pre><code class="language-ts">// packages/db/src/with-tenant.ts — ÚNICA puerta de entrada a la BD para código de negocio
+export async function withTenant&lt;T&gt;(ctx: TenantContext, fn: (tx: Tx) =&gt; Promise&lt;T&gt;): Promise&lt;T&gt; {
+  return db.transaction(async (tx) =&gt; {
+    await tx.execute(sql`select set_config('app.tenant_id', ${ctx.tenantId}, true)`); // = SET LOCAL
+    return fn(tx);
+  });
+}
+</code></pre>
+<h3 id="6-3-ndices-cr-ticos-por-qu-existe-cada-uno">6.3 Índices críticos (por qué existe cada uno)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Índice</th>
+<th>Consulta que acelera</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>no_overlap_per_staff</code> (GiST)</td>
+<td>Garantiza I1 y además sirve para buscar las ocupaciones de un estilista en un rango</td>
+</tr>
+<tr>
+<td><code>sb_branch_period</code> (GiST parcial)</td>
+<td>Vista "agenda del día de la sucursal" y cálculo de disponibilidad</td>
+</tr>
+<tr>
+<td><code>appt_branch_day</code></td>
+<td>Listado de citas por sucursal y día</td>
+</tr>
+<tr>
+<td><code>appt_sync</code>, <code>(tenant_id, row_version)</code> en cada tabla sincronizable</td>
+<td><em>Pull</em> incremental de la PWA</td>
+</tr>
+<tr>
+<td><code>clients_phone_uq</code> / <code>clients_name_trgm</code></td>
+<td>Buscar a la clienta por teléfono o por parte del nombre al llamar o en el mostrador</td>
+</tr>
+<tr>
+<td><code>sales_branch_day</code>, <code>comm_staff_period</code></td>
+<td>Cierre de caja, reportes diarios, liquidación de comisiones</td>
+</tr>
+<tr>
+<td><code>sb_holds_expiry</code></td>
+<td>Job de expiración de <em>holds</em></td>
+</tr>
+<tr>
+<td><code>outbox_pending</code></td>
+<td>Despacho del outbox</td>
+</tr>
+</tbody>
+</table></div>
+<p>Todos los índices de negocio empiezan por <code>tenant_id</code>; los índices GiST lo incluyen gracias a <code>btree_gist</code>.</p>
+<hr />
+</section><section class="chapter"><h2 id="7-dise-o-de-la-agenda">7. Diseño de la agenda</h2>
+<h3 id="7-1-zonas-horarias">7.1 Zonas horarias</h3>
+<ul>
+<li><strong>Persistencia:</strong> todo instante se guarda como <code>timestamptz</code> (UTC). Los horarios laborales se guardan como <strong>hora local + zona IANA de la sucursal</strong> (<code>America/Lima</code>), porque "abre a las 9" es un concepto local.</li>
+<li><strong>Cálculo:</strong> la expansión de la plantilla semanal a instantes se hace en el servidor con la zona de la sucursal (<code>Temporal</code> con <em>polyfill</em> o <code>date-fns-tz</code>). Perú no tiene horario de verano hoy, pero el código <strong>no lo asume</strong>: México, Chile y Paraguay sí lo cambian y lo han modificado varias veces.</li>
+<li><strong>Visualización:</strong> siempre en la zona de la <strong>sucursal</strong>, no en la del dispositivo. Una clienta que reserva desde el extranjero ve "10:00 (hora de Lima)".</li>
+<li><strong>Fecha de negocio</strong> (<code>earned_on</code>, caja del día): se calcula como <code>(closed_at AT TIME ZONE branch.timezone)::date</code>.</li>
+</ul>
+<h3 id="7-2-c-lculo-de-disponibilidad">7.2 Cálculo de disponibilidad</h3>
+<p>Se calcula <strong>en vivo</strong>, sin materializar <em>slots</em>; para un salón de 1–10 estilistas es trivial.</p>
+<pre><code>availability(branch, service, date, staffFilter?):
+  for staff in eligibleStaff(service, staffFilter):          # staff_services + bookable_online
+     duration = override ?? service.duration + service.buffer_after
+     work = expandWeekly(working_hours, date, branch.tz)      # intervalos locales → UTC
+     work = applyOverrides(work, staff_day_overrides[date])
+     busy = staff_bookings where active AND period &amp;&amp; day    # incluye bloqueos y holds vigentes
+     free = subtract(work, busy)
+     free = clip(free, now + minLeadTime, now + maxHorizon)   # p. ej. 30 min y 60 días
+     slots[staff] = stepThrough(free, branch.slot_step_min, duration)
+  return mergeByTime(slots)   # &quot;Cualquier estilista&quot;: se asigna el menos cargado del día
+</code></pre>
+<ul>
+<li><strong>Caché</strong> en proceso: clave <code>t:{tenant}:avail:{branch}:{date}:{service}</code> con TTL de 30 s, invalidada por el evento de cambio en la agenda de esa sucursal y fecha.</li>
+<li><strong>Varios servicios en una cita</strong> (corte + barba): se encadenan las duraciones; con un mismo estilista es un solo bloque continuo. Con estilistas distintos (color y luego corte), la búsqueda es secuencial. Este caso <strong>queda fuera de la reserva pública del MVP</strong>; solo lo hace la recepción.</li>
+</ul>
+<h3 id="7-3-bloqueos-cancelaciones-y-ausencias">7.3 Bloqueos, cancelaciones y ausencias</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Caso</th>
+<th>Implementación</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bloqueo (almuerzo, trámite)</td>
+<td>Fila <code>kind='block'</code> en <code>staff_bookings</code>: compite por el espacio con el mismo constraint</td>
+</tr>
+<tr>
+<td>Día libre o feriado</td>
+<td><code>staff_day_overrides.is_off = true</code>. Si ya hay citas ese día, la UI las lista para reprogramarlas; <strong>nunca se cancelan automáticamente</strong></td>
+</tr>
+<tr>
+<td>Cancelación por la clienta</td>
+<td>Enlace firmado del recordatorio o botón de WhatsApp → <code>status='cancelled'</code>, <code>staff_bookings.active=false</code> en <strong>la misma transacción</strong>, evento <code>AppointmentCancelled</code> (que dispara la lista de espera). Si se cancela con menos de <code>cancel_min_hours</code>, se marca como cancelación tardía (dato para la política del salón; sin cobro automático en el MVP)</td>
+</tr>
+<tr>
+<td>Reprogramación</td>
+<td>Transacción única: se desactivan las ocupaciones viejas y se insertan las nuevas; si el constraint falla, se hace <em>rollback</em> y la cita original queda intacta</td>
+</tr>
+<tr>
+<td>Ausencia (<em>no-show</em>)</td>
+<td>Acción manual o sugerida 30 min después del inicio sin <em>check-in</em>; incrementa <code>clients.no_show_count</code>; la regla de depósito obligatorio para clientes reincidentes llega en la Fase 2</td>
+</tr>
+<tr>
+<td>Walk-in</td>
+<td>Cita <code>source='walk_in'</code> creada "ahora" con el primer estilista libre, o entrada en la <strong>cola del día</strong> si no hay nadie libre</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="7-4-lista-de-espera">7.4 Lista de espera</h3>
+<ol>
+<li>El evento <code>AppointmentCancelled</code> (o un bloqueo eliminado) libera el intervalo <code>X</code>.</li>
+<li>El worker busca <code>waitlist_entries</code> en estado <code>waiting</code> cuyo <code>desired &amp;&amp; X</code> y cuyo servicio cabe en el hueco, ordenadas por <code>created_at</code>.</li>
+<li>Ofrece el espacio a las <strong>primeras N=3</strong> por WhatsApp con un enlace válido 15 min. <strong>Gana quien confirme primero</strong>: la confirmación intenta insertar en <code>staff_bookings</code> y el <code>EXCLUDE</code> decide; los demás reciben "ya fue tomado".</li>
+<li>Si nadie confirma, se pasa a las siguientes N.</li>
+</ol>
+<h3 id="7-5-concurrencia-dos-personas-reservan-el-mismo-espacio">7.5 Concurrencia: dos personas reservan el mismo espacio</h3>
+<p><strong>Defensa en tres niveles:</strong></p>
+<ol>
+<li><strong>Constraint de exclusión (fuente de verdad).</strong> Dos transacciones concurrentes que insertan intervalos solapados: una hace <em>commit</em> y la otra recibe <code>23P01 exclusion_violation</code>. Se traduce a <code>409 SLOT_TAKEN</code> con <strong>3 horarios alternativos</strong> en el cuerpo. No hace falta <code>SELECT … FOR UPDATE</code> ni <em>advisory locks</em>.</li>
+<li><strong><em>Hold</em> temporal</strong> en la reserva pública. Al elegir un horario se crea <code>kind='hold'</code> con <code>expires_at = now()+5min</code>, de modo que la clienta no pierde el espacio mientras escribe su nombre. Antes de insertar, la misma transacción desactiva los <em>holds</em> vencidos del estilista (<code>UPDATE … SET active=false WHERE kind='hold' AND expires_at &lt; now()</code>), sin esperar al job.</li>
+<li><strong>Idempotencia.</strong> <code>POST /v1/public/holds</code> y <code>POST /v1/appointments</code> exigen <code>Idempotency-Key</code>; además, el <code>id</code> es un UUIDv7 generado por el cliente. Un reintento por mala señal devuelve la misma respuesta, no una segunda cita.</li>
+</ol>
+<figure class="diagram"><pre class="mermaid">sequenceDiagram
+  autonumber
+  actor C as Clienta (móvil, 3G)
+  participant P as Reserva pública (Astro)
+  participant A as API
+  participant DB as PostgreSQL
+  participant W as Worker
+  participant M as WhatsApp Cloud API
+
+  C-&gt;&gt;P: abre tu-app.pe/barberia-lucho
+  P-&gt;&gt;A: GET /v1/public/{slug}/availability?service&amp;date
+  A-&gt;&gt;DB: horario + staff_bookings activos (RLS: tenant del slug)
+  A--&gt;&gt;P: slots
+  C-&gt;&gt;P: elige sábado 10:30
+  P-&gt;&gt;A: POST /v1/public/holds  (Idempotency-Key: k1)
+  A-&gt;&gt;DB: BEGIN; expirar holds vencidos; INSERT staff_bookings(kind=hold) …
+  alt espacio libre
+    DB--&gt;&gt;A: OK
+    A--&gt;&gt;P: 201 hold {id, expires_at:+5min}
+  else otra persona lo tomó
+    DB--&gt;&gt;A: 23P01 exclusion_violation
+    A--&gt;&gt;P: 409 SLOT_TAKEN + 3 alternativas
+  end
+  C-&gt;&gt;P: nombre + teléfono (+ consentimiento de recordatorios)
+  P-&gt;&gt;A: POST /v1/public/holds/{id}/confirm (Idempotency-Key: k2)
+  A-&gt;&gt;DB: BEGIN; upsert cliente por teléfono; hold→service; appointment=confirmed;&lt;br/&gt;INSERT outbox(AppointmentConfirmed); COMMIT
+  A--&gt;&gt;P: 200 confirmada
+  W-&gt;&gt;DB: lee outbox → encola recordatorios (−24h, −2h) y confirmación
+  W-&gt;&gt;M: plantilla &quot;cita_confirmada&quot; con botones
+  M--&gt;&gt;C: WhatsApp: &quot;Tu cita en Barbería Lucho el sáb 10:30 ✅&quot;
+  Note over W,M: a T−24h el job relee la cita; si sigue confirmada, envía el recordatorio
+  C-&gt;&gt;M: toca &quot;Cancelar&quot;
+  M-&gt;&gt;A: webhook (firma verificada)
+  A-&gt;&gt;DB: cancelar + liberar ocupación + outbox(AppointmentCancelled) → lista de espera
+</pre></figure>
+<p><strong>Protección anti-abuso en la reserva pública:</strong> <em>rate limit</em> por IP y por teléfono; máximo 2 <em>holds</em> activos por IP; Cloudflare Turnstile tras un umbral; verificación OTP por WhatsApp <strong>solo</strong> cuando el teléfono tiene historial de ausencias o el salón lo exige.</p>
+<hr />
+</section><section class="chapter"><h2 id="8-modo-offline-y-sincronizaci-n">8. Modo offline y sincronización</h2>
+<h3 id="8-1-qu-funciona-offline-y-qu-no">8.1 Qué funciona offline y qué no</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Función</th>
+<th>Offline</th>
+<th>Estrategia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Cobrar (crear venta, registrar pagos)</strong></td>
+<td>✅ Total</td>
+<td>Comandos <em>append-only</em> con ID del cliente: <strong>no generan conflictos</strong></td>
+</tr>
+<tr>
+<td>Abrir y cerrar caja</td>
+<td>✅</td>
+<td>Una caja por dispositivo (S4); se sincroniza después</td>
+</tr>
+<tr>
+<td>Ver la agenda del día y de la semana</td>
+<td>✅ Lectura</td>
+<td>Caché de los últimos datos sincronizados con indicador "actualizado hace X min"</td>
+</tr>
+<tr>
+<td>Crear o mover citas</td>
+<td>⚠️ Fase 1: <strong>tentativas</strong></td>
+<td>Se guardan como <code>pending_sync</code>. Al sincronizar, el servidor valida; si hay choque, la cita queda en <code>conflict</code> y requiere acción humana</td>
+</tr>
+<tr>
+<td>Check-in y completar cita</td>
+<td>✅</td>
+<td>Transición de estado con LWW controlado (solo avanza; nunca retrocede)</td>
+</tr>
+<tr>
+<td>Editar la ficha de una clienta</td>
+<td>✅</td>
+<td>LWW <strong>por campo</strong> con <code>updated_at</code> del dispositivo; conflicto registrado en auditoría</td>
+</tr>
+<tr>
+<td>Notas sensibles y fotos</td>
+<td>⚠️</td>
+<td>Las notas se cifran antes de guardarse en IndexedDB; las fotos se encolan y suben al reconectar</td>
+</tr>
+<tr>
+<td>Disponibilidad pública, reservas online, pagos online, recordatorios</td>
+<td>❌</td>
+<td>Requieren el servidor (son tiempo real por naturaleza)</td>
+</tr>
+<tr>
+<td>Catálogo y precios</td>
+<td>Solo lectura</td>
+<td>El servidor manda; la venta guarda el <em>snapshot</em> del precio cobrado (es un hecho, no un conflicto)</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="8-2-protocolo">8.2 Protocolo</h3>
+<figure class="diagram"><pre class="mermaid">flowchart LR
+  subgraph PWA
+    UI --&gt; CMD[&quot;Command (UUIDv7, device_id,&lt;br/&gt;client_ts, base_row_version)&quot;]
+    CMD --&gt; IDB[(&quot;IndexedDB&lt;br/&gt;outbox + réplica local&quot;)]
+    IDB --&gt; SYNC[&quot;Sync engine&lt;br/&gt;(Background Sync / online event /&lt;br/&gt;cada 30 s)&quot;]
+  end
+  SYNC -- &quot;POST /v1/sync/push [batch ≤ 50, idempotente]&quot; --&gt; API
+  API -- &quot;resultados por comando:&lt;br/&gt;applied | duplicate | conflict | rejected&quot; --&gt; SYNC
+  SYNC -- &quot;GET /v1/sync/pull?cursor=row_version&amp;scopes=branch:X&quot; --&gt; API
+  API -- &quot;filas cambiadas (incluye soft-deletes) + nuevo cursor&quot; --&gt; SYNC
+</pre></figure>
+<ul>
+<li><strong>Push:</strong> cada comando es idempotente por su <code>id</code>. El servidor lo aplica con las <strong>mismas reglas de dominio</strong> que un request online, porque es el mismo <em>handler</em>.</li>
+<li><strong>Pull:</strong> <code>WHERE tenant_id = … AND branch_id IN (…) AND row_version &gt; :cursor ORDER BY row_version LIMIT 500</code>. Las eliminaciones son lógicas (<code>deleted_at</code> o <code>active=false</code>) para que se propaguen.</li>
+<li><strong>Alcance de la réplica local:</strong> solo la sucursal activa, la agenda de −7 a +30 días, los clientes con actividad en los últimos 12 meses y el catálogo completo. Así IndexedDB se mantiene en pocos MB.</li>
+<li><strong>Correlativo de venta:</strong> se asigna al sincronizar (<code>number</code>). El ticket offline muestra un número provisional <code>OFF-{device}-{n}</code>. Esto encaja con la Fase 2 de SUNAT, donde el comprobante electrónico se emite al sincronizar; la normativa admite el envío posterior dentro de plazo (verificar el plazo vigente con el OSE).</li>
+</ul>
+<h3 id="8-3-resoluci-n-de-conflictos">8.3 Resolución de conflictos</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Tipo de dato</th>
+<th>Regla</th>
+<th>Por qué</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ventas, pagos, movimientos de caja</td>
+<td><strong>Sin conflicto</strong> (inserciones con ID único)</td>
+<td>Son hechos ocurridos; nunca se descartan</td>
+</tr>
+<tr>
+<td>Anular una venta que se editó offline</td>
+<td>No existe "editar": se anula y se crea otra venta</td>
+<td>La inmutabilidad elimina el problema</td>
+</tr>
+<tr>
+<td>Cita creada offline que choca con otra</td>
+<td><code>status='conflict'</code>, notificación en la app, la recepcionista elige (mover, cambiar de estilista, cancelar)</td>
+<td><strong>Nunca</strong> se pisa la cita de otra clienta automáticamente</td>
+</tr>
+<tr>
+<td>Cita modificada en dos dispositivos</td>
+<td>Comparación de <code>base_row_version</code>: si cambió en el servidor → conflicto visible</td>
+<td>La agenda es demasiado importante para LWW a ciegas</td>
+</tr>
+<tr>
+<td>Ficha de cliente</td>
+<td>LWW por campo</td>
+<td>El costo de un error es bajo y hay auditoría</td>
+</tr>
+<tr>
+<td>Estado de una cita (<em>check-in</em>, completada)</td>
+<td>Avance monotónico (<code>completed</code> gana a <code>checked_in</code>)</td>
+<td>Las transiciones forman un orden parcial</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Por qué no CRDTs:</strong> resuelven texto y estructuras colaborativas. Aquí el conflicto relevante (dos citas en el mismo espacio) <strong>no tiene una fusión correcta automática</strong>: necesita una persona. <strong>Por qué no PowerSync en el MVP:</strong> resolvería la réplica Postgres→SQLite y es una buena opción si el sync propio se complica, pero agrega costo y una dependencia. Se reevalúa en la Fase 2 con métricas reales de conflictos.</p>
+<h3 id="8-4-qu-debe-ser-tiempo-real">8.4 Qué debe ser tiempo real</h3>
+<ul>
+<li><strong>Disponibilidad pública y confirmación de reservas:</strong> siempre contra el servidor.</li>
+<li><strong>Agenda compartida entre recepción y estilistas:</strong> SSE con eventos <code>agenda.changed {branch, date}</code>; el cliente vuelve a pedir ese día. Si el SSE cae, se hace <em>polling</em> cada 60 s.</li>
+<li><strong>Estado de pagos online y webhooks:</strong> servidor.</li>
+<li><strong>Todo lo demás</strong> puede esperar a la siguiente sincronización.</li>
+</ul>
+<hr />
+</section><section class="chapter"><h2 id="9-seguridad-y-cumplimiento">9. Seguridad y cumplimiento</h2>
+<h3 id="9-1-ley-29733-protecci-n-de-datos-personales-y-su-reglamento">9.1 Ley 29733 (Protección de Datos Personales) y su Reglamento</h3>
+<blockquote>
+<p>No es asesoría legal. El <strong>Reglamento vigente (D.S. 016-2024-JUS)</strong> reemplazó al de 2013; valida los puntos con un abogado peruano antes del lanzamiento comercial.</p>
+</blockquote>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Obligación</th>
+<th>Cómo se cumple en el producto</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Roles</strong>: el salón es el <em>titular del banco de datos</em> de sus clientes; nosotros somos el <strong>encargado del tratamiento</strong></td>
+<td>Contrato de encargo de tratamiento (DPA) aceptado en el onboarding; no usamos los datos de clientes de los salones para fines propios</td>
+</tr>
+<tr>
+<td><strong>Consentimiento</strong> libre, previo, expreso, informado y por finalidad</td>
+<td><code>crm.client_consents</code> por finalidad (servicio, recordatorios, marketing, fotos); casilla <strong>no premarcada</strong> en la reserva pública; el registro guarda la versión de la política</td>
+</tr>
+<tr>
+<td><strong>Datos sensibles</strong> (salud: alergias, embarazo, condiciones del cuero cabelludo)</td>
+<td>Consentimiento por escrito o equivalente para <code>sensitive_data</code>; cifrado a nivel de campo; acceso restringido por rol y auditado</td>
+</tr>
+<tr>
+<td><strong>Derechos ARCO</strong> (acceso, rectificación, cancelación, oposición)</td>
+<td>El dueño exporta (JSON/PDF) o elimina a una clienta desde la UI; la eliminación anonimiza las ventas (se conservan importes por obligaciones contables) y borra las fotos de R2</td>
+</tr>
+<tr>
+<td><strong>Flujo transfronterizo</strong> (servidores en EE. UU.)</td>
+<td>Informarlo en la política de privacidad; DPA con los proveedores (Neon, Render, Cloudflare, Meta); comunicarlo a la Autoridad Nacional de Protección de Datos Personales cuando corresponda</td>
+</tr>
+<tr>
+<td><strong>Inscripción de bancos de datos</strong></td>
+<td>Guía para que el salón inscriba su banco de clientes; nosotros inscribimos el nuestro (usuarios del SaaS)</td>
+</tr>
+<tr>
+<td><strong>Incidentes de seguridad</strong></td>
+<td>Procedimiento de notificación a la Autoridad y a los afectados dentro del plazo reglamentario (el nuevo reglamento fija plazos cortos; confirmar con abogado); <em>runbook</em> en §10</td>
+</tr>
+<tr>
+<td><strong>Medidas de seguridad</strong></td>
+<td>Las de este apartado más el registro de accesos</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="9-2-cifrado">9.2 Cifrado</h3>
+<ul>
+<li><strong>En tránsito:</strong> TLS 1.2+ en todos los saltos (Cloudflare, Render y Neon exigen TLS); HSTS con <em>preload</em>; <em>webhooks</em> con verificación de firma (Meta <code>X-Hub-Signature-256</code>, Culqi).</li>
+<li><strong>En reposo:</strong> cifrado AES-256 del proveedor en Neon, R2 y los backups.</li>
+<li><strong>A nivel de campo</strong> para notas sensibles y tokens de terceros (credenciales Culqi/OSE de cada salón): <strong>AES-256-GCM en la aplicación</strong>, con claves derivadas por tenant (<code>HKDF(master_key, tenant_id, key_version)</code>). La clave maestra vive en el gestor de secretos. Al eliminar un tenant se borra su material derivado → <strong>borrado criptográfico</strong> también de los backups.</li>
+<li><strong>En el dispositivo:</strong> IndexedDB no está cifrado por el navegador. Las notas sensibles se guardan cifradas con una clave de sesión que no persiste; al cerrar sesión se borra la réplica local. El dispositivo debe tener bloqueo de pantalla (recomendación en el onboarding).</li>
+</ul>
+<h3 id="9-3-auditor-a">9.3 Auditoría</h3>
+<p>Se registra en <code>platform.audit_log</code> (append-only, sin <code>UPDATE</code>/<code>DELETE</code> para <code>app_runtime</code>):</p>
+<ul>
+<li>Lectura de notas sensibles, exportaciones y eliminaciones ARCO.</li>
+<li>Anulación de ventas, diferencias de caja, cambios de precio y de reglas de comisión.</li>
+<li>Cambios de roles, invitaciones, revocaciones e inicios de sesión fallidos.</li>
+<li>Acciones del soporte de la plataforma ("impersonación" solo con permiso del dueño, limitada en el tiempo y registrada).</li>
+</ul>
+<p>Retención: 2 años en caliente, y luego exportación a R2.</p>
+<h3 id="9-4-backups-y-recuperaci-n-ante-desastres">9.4 Backups y recuperación ante desastres</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Mecanismo</th>
+<th>Frecuencia</th>
+<th>Retención</th>
+<th>Cubre</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Neon PITR (WAL)</td>
+<td>Continuo</td>
+<td>7 días (plan Launch)</td>
+<td>Error humano o migración mala → restauración a un punto</td>
+</tr>
+<tr>
+<td><code>pg_dump</code> lógico cifrado → <strong>R2</strong> (otro proveedor)</td>
+<td>Diario, 03:00 Lima</td>
+<td>30 diarios + 12 mensuales</td>
+<td>Pérdida de la cuenta de Neon o del proveedor</td>
+</tr>
+<tr>
+<td>R2 versionado de objetos</td>
+<td>Continuo</td>
+<td>30 días</td>
+<td>Borrado accidental de fotos</td>
+</tr>
+<tr>
+<td>Réplica offline en las PWAs</td>
+<td>—</td>
+<td>—</td>
+<td>Continuidad del negocio: el salón sigue cobrando</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>Objetivos:</strong> <strong>RPO ≤ 5 min</strong> (en la práctica, segundos con PITR) y <strong>RTO ≤ 4 h</strong> para una restauración completa en otro proveedor. Para fallas parciales (despliegue malo), RTO ≤ 15 min mediante <em>rollback</em> de Render.</li>
+<li><strong>Simulacro mensual de restauración</strong> (primer lunes): restaurar el <em>dump</em> en una rama de Neon y correr las pruebas de <em>smoke</em>. Un backup que nunca se restauró no cuenta como backup.</li>
+<li><strong>Restaurar un solo tenant:</strong> script de exportación e importación lógica filtrada por <code>tenant_id</code> sobre una rama PITR.</li>
+</ul>
+<h3 id="9-5-gesti-n-de-secretos">9.5 Gestión de secretos</h3>
+<ul>
+<li><strong>MVP:</strong> variables de entorno de Render (<em>environment groups</em>) y secretos de GitHub Actions; <code>.env</code> solo local, nunca versionado; <strong>gitleaks</strong> en <em>pre-commit</em> y CI.</li>
+<li><strong>Fase 2:</strong> <strong>Doppler</strong> o <strong>Infisical</strong> como fuente única, con rotación trimestral de claves de API y clave maestra versionada (<code>key_version</code>).</li>
+<li>Las credenciales de terceros <strong>de cada salón</strong> (OSE, Culqi) se guardan cifradas en la BD (§9.2), nunca en variables de entorno.</li>
+<li>Principio de mínimo privilegio: <code>app_runtime</code> ≠ <code>app_migrator</code> ≠ <code>app_platform</code>; tokens de Meta con permisos de sistema mínimos.</li>
+</ul>
+<h3 id="9-6-seguridad-de-aplicaci-n-lo-m-nimo-no-negociable">9.6 Seguridad de aplicación (lo mínimo no negociable)</h3>
+<p>Validación con Zod en todos los bordes; consultas parametrizadas (Drizzle); CSP estricta en el panel y la página pública; <em>rate limiting</em> por IP, usuario y tenant; cookies <code>SameSite</code> con protección CSRF en métodos mutantes; dependencias revisadas con Renovate y <code>npm audit</code> en CI; subidas a R2 solo vía URL prefirmada, con validación de tipo y tamaño.</p>
+<hr />
+</section><section class="chapter"><h2 id="10-observabilidad-y-operaci-n">10. Observabilidad y operación</h2>
+<h3 id="10-1-qu-medir-desde-el-d-a-uno">10.1 Qué medir desde el día uno</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Categoría</th>
+<th>Métrica</th>
+<th>Umbral o objetivo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Disponibilidad</td>
+<td>Uptime de <code>/healthz</code> (API, BD y cola) y de la página pública</td>
+<td>≥ 99.5 % mensual</td>
+</tr>
+<tr>
+<td>Latencia</td>
+<td>p95 de <code>GET availability</code> y <code>POST holds/appointments</code></td>
+<td>&lt; 500 ms</td>
+</tr>
+<tr>
+<td>Errores</td>
+<td>Tasa de 5xx por endpoint y por tenant</td>
+<td>&lt; 1 %</td>
+</tr>
+<tr>
+<td><strong>Negocio: recordatorios</strong></td>
+<td>% enviados a tiempo (±5 min), % entregados, % fallidos por causa</td>
+<td>≥ 97 % a tiempo</td>
+</tr>
+<tr>
+<td><strong>Negocio: reservas</strong></td>
+<td><code>409 SLOT_TAKEN</code> por día (si sube, la UX de disponibilidad falla), <em>holds</em> que expiran sin confirmar</td>
+<td>Tendencia</td>
+</tr>
+<tr>
+<td><strong>Sync</strong></td>
+<td>Comandos pendientes por dispositivo, antigüedad del más viejo, tasa de <code>conflict</code></td>
+<td>Alerta si hay &gt; 24 h sin sincronizar teniendo conexión</td>
+</tr>
+<tr>
+<td>Cola</td>
+<td>Jobs atrasados (lag), jobs en <em>dead letter</em></td>
+<td>Lag &lt; 2 min</td>
+</tr>
+<tr>
+<td>Costos</td>
+<td>Mensajes de WhatsApp por tenant y mes vs. cuota del plan; almacenamiento por tenant</td>
+<td>Alerta al 80 % de la cuota</td>
+</tr>
+<tr>
+<td>Producto</td>
+<td>Activación (salón con ≥ 10 citas en su primera semana), retención semanal, ausencias antes/después</td>
+<td>Panel semanal</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="10-2-alertas-m-nimas-y-solo-estas">10.2 Alertas mínimas (y solo estas)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Alerta</th>
+<th>Severidad</th>
+<th>Canal</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>API o página pública caída &gt; 3 min</td>
+<td>🔴 Crítica</td>
+<td>Llamada o push (Better Stack) en horario 8–22 h Lima; Telegram fuera de ese horario</td>
+</tr>
+<tr>
+<td>Tasa de 5xx &gt; 5 % durante 10 min</td>
+<td>🔴</td>
+<td>Ídem</td>
+</tr>
+<tr>
+<td>Lag de la cola de recordatorios &gt; 10 min</td>
+<td>🔴</td>
+<td>Ídem (los recordatorios tardíos son ausencias)</td>
+</tr>
+<tr>
+<td>Webhook de Meta con errores de firma o token expirado</td>
+<td>🟠</td>
+<td>Telegram/Slack</td>
+</tr>
+<tr>
+<td>Backup diario fallido</td>
+<td>🟠</td>
+<td>Email + Telegram</td>
+</tr>
+<tr>
+<td>Uso de la BD &gt; 80 % (almacenamiento o conexiones)</td>
+<td>🟡</td>
+<td>Email</td>
+</tr>
+<tr>
+<td>Nuevo tipo de error en Sentry</td>
+<td>🟡</td>
+<td>Resumen diario</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="10-3-operar-sin-guardias-24-7">10.3 Operar sin guardias 24/7</h3>
+<ol>
+<li><strong>Diseñar para degradarse, no para caerse:</strong> si la API cae, la PWA sigue cobrando y mostrando la agenda; si falla WhatsApp, la UI ofrece el botón <code>wa.me</code>; si falla la cola, los recordatorios se reintentan (y los demasiado tarde se descartan para no avisar de una cita ya pasada).</li>
+<li><strong>Horario de atención alineado con el cliente:</strong> los salones abren entre las 9 y las 21 h. Las alertas críticas suenan de 8 a 22 h; de noche solo se registran, salvo una caída total que dure más de 30 min.</li>
+<li><strong>Rotación semanal "dueño de la semana"</strong> entre los devs, con el <em>runbook</em> en el repo (<code>docs/runbooks/</code>): API caída, BD llena, token de WhatsApp vencido, restaurar un backup, rotar un secreto, incidente de datos personales.</li>
+<li><strong>Status page</strong> pública (Better Stack) y un banner en la app: se evitan 50 mensajes de WhatsApp preguntando "¿se cayó?".</li>
+<li><strong>Postmortem</strong> sin culpables en todo incidente 🔴, con una acción concreta.</li>
+<li><strong>Nada se despliega en viernes, sábado ni la víspera de un feriado.</strong></li>
+</ol>
+<hr />
+</section><section class="chapter"><h2 id="11-estructura-del-repositorio">11. Estructura del repositorio</h2>
+<p><strong>Monorepo con pnpm workspaces + Turborepo.</strong> Con 1–3 devs, un PR que cambia contrato, API y PWA a la vez es la norma; un multirepo multiplicaría el trabajo de versionado.</p>
+<pre><code class="language-text">salon-saas/
+├── apps/
+│   ├── api/                         # NestJS + Fastify (también arranca como worker: `node dist/main --worker`)
+│   │   └── src/
+│   │       ├── main.ts
+│   │       ├── platform/            # tenancy guard, withTenant, outbox, idempotency, audit, jobs
+│   │       └── modules/
+│   │           ├── iam/
+│   │           ├── catalog/
+│   │           ├── crm/
+│   │           ├── agenda/
+│   │           │   ├── domain/          # entidades, value objects, reglas puras (sin Nest, sin BD)
+│   │           │   │   ├── appointment.ts
+│   │           │   │   ├── availability.ts      # algoritmo puro, 100 % testeado
+│   │           │   │   └── events.ts
+│   │           │   ├── application/     # casos de uso: BookAppointment, CancelAppointment…
+│   │           │   ├── infrastructure/  # repositorios Drizzle, mapeo de errores 23P01 → SlotTaken
+│   │           │   ├── http/            # controllers ts-rest
+│   │           │   ├── jobs/            # handlers de pg-boss del módulo
+│   │           │   └── index.ts         # FACHADA PÚBLICA: lo único importable desde otros módulos
+│   │           ├── booking/
+│   │           ├── pos/
+│   │           ├── commissions/
+│   │           ├── notifications/
+│   │           │   └── providers/       # whatsapp-cloud.ts, resend.ts, wa-link.ts (puertos/adaptadores)
+│   │           ├── reports/
+│   │           └── billing/
+│   ├── web/                         # PWA panel (React + Vite)
+│   │   └── src/
+│   │       ├── app/                 # rutas TanStack Router
+│   │       ├── features/            # agenda/, pos/, clients/, staff/, reports/, settings/
+│   │       ├── offline/             # dexie schema, outbox, sync-engine, conflict UI
+│   │       └── sw/                  # service worker (Workbox)
+│   └── booking/                     # Astro SSR (Cloudflare Workers)
+├── packages/
+│   ├── contracts/                   # ts-rest + Zod: la fuente de verdad de la API (→ OpenAPI)
+│   ├── db/                          # esquema Drizzle, migrations/*.sql, withTenant, seeds
+│   ├── domain-kernel/               # Money (céntimos), TenantId, UUIDv7, Result, tiempo/zonas
+│   ├── ui/                          # componentes shadcn compartidos (web + islas de booking)
+│   └── config/                      # eslint, tsconfig, prettier, dependency-cruiser
+├── infra/
+│   ├── render.yaml                  # Blueprint (API, worker, env groups)
+│   └── cloudflare/                  # wrangler.toml
+├── docs/
+│   ├── arquitectura.md              # este documento
+│   ├── adr/                         # 0001-monolito-modular.md, 0002-rls.md, …
+│   └── runbooks/
+├── tests/
+│   ├── e2e/                         # Playwright: flujo de reserva, cobro offline
+│   └── tenancy/                     # suite de aislamiento entre dos tenants
+├── .github/workflows/               # ci.yml, deploy.yml, backup-restore-drill.yml
+├── turbo.json
+└── pnpm-workspace.yaml
+</code></pre>
+<h3 id="convenciones">Convenciones</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Tema</th>
+<th>Regla</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Lenguaje</td>
+<td>TypeScript <code>strict</code>, sin <code>any</code> (regla de ESLint); código en <strong>inglés</strong>, UI y documentación de negocio en <strong>español</strong> (lenguaje ubicuo: <code>Appointment</code> = "cita", <code>Hold</code> = "reserva temporal", <code>CashSession</code> = "caja")</td>
+</tr>
+<tr>
+<td>Límites</td>
+<td><code>dependency-cruiser</code>: <code>modules/X/**</code> solo importa <code>modules/Y/index.ts</code>; <code>domain/</code> no importa Nest ni Drizzle; <code>apps/web</code> no importa <code>apps/api</code></td>
+</tr>
+<tr>
+<td>Datos</td>
+<td>Dinero en céntimos <code>integer</code> (nunca <code>float</code>); fechas como <code>timestamptz</code>; IDs UUIDv7; columnas <code>snake_case</code>, TS <code>camelCase</code></td>
+</tr>
+<tr>
+<td>Errores</td>
+<td>Errores de dominio tipados (<code>SlotTaken</code>, <code>OutsideWorkingHours</code>) → <em>mapper</em> HTTP único en formato <code>application/problem+json</code></td>
+</tr>
+<tr>
+<td>Tests</td>
+<td>Dominio puro: unit tests (Vitest) obligatorios. Casos de uso: tests de integración con Postgres real (Testcontainers), <strong>no mocks de BD</strong>. Disponibilidad y comisiones: <em>property-based tests</em> (fast-check)</td>
+</tr>
+<tr>
+<td>Git</td>
+<td><em>Trunk-based</em>, PR ≤ 400 líneas, Conventional Commits, al menos una revisión (el junior revisa también, para aprender); ADR para cada decisión difícil de revertir</td>
+</tr>
+<tr>
+<td>Junior</td>
+<td>Empieza por módulos de soporte (catálogo, CRM, reportes). Agenda, sync y tenancy pasan por <em>pair programming</em> hasta que domine RLS</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+</section><section class="chapter"><h2 id="12-plan-de-implementaci-n-por-fases">12. Plan de implementación por fases</h2>
+<figure class="diagram"><pre class="mermaid">gantt
+  dateFormat  YYYY-MM-DD
+  title Hoja de ruta (inicio supuesto: 2026-10-19)
+  section Fase 0
+  Cimientos                     :f0, 2026-10-19, 2w
+  section Fase 1 (MVP)
+  Agenda + catálogo + CRM       :f1a, after f0, 3w
+  Reserva pública + WhatsApp    :f1b, after f1a, 2w
+  Caja + offline + comisiones   :f1c, after f1b, 3w
+  Billing + piloto + hardening  :f1d, after f1c, 2w
+  section Fase 2
+  Crecimiento                   :f2, after f1d, 12w
+  section Fase 3
+  Escala y LATAM                :f3, after f2, 24w
+</pre></figure>
+<h3 id="fase-0-cimientos-2-semanas">Fase 0 — Cimientos (2 semanas)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Entra</th>
+<th>No entra</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Monorepo, CI (lint, typecheck, tests, gitleaks), Render + Neon + Cloudflare con <strong>staging y prod</strong></td>
+<td>Cualquier pantalla de negocio más allá de un "hola"</td>
+</tr>
+<tr>
+<td><code>withTenant</code>, RLS, roles de BD, <strong>suite de aislamiento de tenants</strong></td>
+<td>Diseño visual fino</td>
+</tr>
+<tr>
+<td>Better Auth, membresías, <em>guard</em> de tenancy y RBAC</td>
+<td></td>
+</tr>
+<tr>
+<td>Outbox + pg-boss + idempotencia + auditoría</td>
+<td></td>
+</tr>
+<tr>
+<td>Sentry, logs JSON, uptime, backup diario a R2 <strong>y primer simulacro de restauración</strong></td>
+<td></td>
+</tr>
+<tr>
+<td>Esqueleto PWA instalable con service worker</td>
+<td></td>
+</tr>
+<tr>
+<td>Solicitud de la cuenta de WhatsApp Business y verificación del negocio en Meta (<strong>tarda días o semanas: empezar aquí</strong>)</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Criterio de salida:</strong> un PR que crea una tabla nueva sin RLS <strong>falla en CI</strong>; despliegue a prod con un clic; restauración de backup probada; un usuario puede registrarse, crear un salón e invitar a otra persona.</p>
+<h3 id="fase-1-mvp-vendible-8-10-semanas">Fase 1 — MVP vendible (8–10 semanas)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Entra</th>
+<th>No entra (y por qué)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Onboarding &lt; 10 min con plantillas de servicios</td>
+<td>Multi-sucursal en la UI (el modelo ya lo soporta)</td>
+</tr>
+<tr>
+<td>Catálogo, personal, horarios, bloqueos, excepciones</td>
+<td>Inventario de productos</td>
+</tr>
+<tr>
+<td>Agenda día/semana por estilista, crear, mover, cancelar, ausencia, check-in</td>
+<td>Depósitos y pagos online</td>
+</tr>
+<tr>
+<td><strong>Cola de walk-ins</strong> (si la validación §14 lo confirma)</td>
+<td>Facturación electrónica SUNAT (S5)</td>
+</tr>
+<tr>
+<td>Ficha de cliente, historial, notas (incluidas las sensibles cifradas), consentimientos, 1–3 fotos por visita</td>
+<td>Lista de espera automática (se usa la manual)</td>
+</tr>
+<tr>
+<td><strong>Enlace público de reserva</strong> con <em>holds</em> y confirmación/cancelación</td>
+<td>Número de WhatsApp propio por salón</td>
+</tr>
+<tr>
+<td>Recordatorios WhatsApp automáticos (planes pagos) + <code>wa.me</code> (plan gratis) + email</td>
+<td>Marketing y campañas</td>
+</tr>
+<tr>
+<td><strong>Caja</strong>: venta desde la cita o rápida, Yape/Plin/efectivo/POS, apertura y cierre con arqueo, anulación con permiso; <strong>offline completo</strong></td>
+<td>Agenda con escritura offline completa (solo tentativa)</td>
+</tr>
+<tr>
+<td>Comisiones por porcentaje o monto fijo con resolución por especificidad; reporte por período</td>
+<td>Alquiler de silla, metas y bonos</td>
+</tr>
+<tr>
+<td>Reportes: ingresos del día/semana/mes por método y por estilista, ocupación, ausencias</td>
+<td>Reportes personalizados y exportación avanzada</td>
+</tr>
+<tr>
+<td>Billing: planes, límites, cobro Culqi + Yape manual, período de gracia, comprobante de nuestra suscripción</td>
+<td>Mercado Pago Suscripciones</td>
+</tr>
+<tr>
+<td>Política de privacidad, términos y DPA (con abogado)</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Hipótesis de planes</strong> (validar): <strong>Gratis</strong> (1 estilista, 60 citas/mes, recordatorios <code>wa.me</code>, enlace público), <strong>Básico ~S/ 39</strong> (hasta 3 estilistas, 150 WhatsApp/mes, caja, comisiones), <strong>Pro ~S/ 79</strong> (ilimitado, 500 WhatsApp/mes, reportes completos, fotos), adicionales por paquete de mensajes.</p>
+<p><strong>Criterio de salida:</strong></p>
+<ul>
+<li><strong>10 salones pagando</strong> (no solo usuarios gratis) durante ≥ 4 semanas, con ≥ 70 % de uso semanal.</li>
+<li>Tasa de recordatorios entregados ≥ 97 % y <strong>reducción de ausencias</strong> medida frente a la línea base del piloto.</li>
+<li>0 incidentes de fuga entre tenants; 0 ventas perdidas en uso offline.</li>
+<li>Tiempo de cobro en el mostrador ≤ 20 s (venta típica).</li>
+</ul>
+<h3 id="fase-2-crecimiento-3-meses">Fase 2 — Crecimiento (≈ 3 meses)</h3>
+<ul>
+<li><strong>Multi-sucursal</strong> en la UI: cambio de sucursal, catálogo con precios por sucursal, reportes consolidados y personal compartido.</li>
+<li><strong>Facturación electrónica SUNAT</strong> vía OSE/PSE (adaptador <code>EInvoicingProvider</code>), emitida al sincronizar la venta.</li>
+<li><strong>Depósitos y prepago</strong> con Culqi (Yape y tarjeta) o Mercado Pago, obligatorios para clientes con ausencias.</li>
+<li><strong>Lista de espera automática</strong> y oferta de huecos liberados.</li>
+<li><strong>Número de WhatsApp propio por salón</strong> (<em>Embedded Signup</em>) y bandeja de respuestas.</li>
+<li>Agenda offline con escritura completa; evaluar PowerSync si la tasa de conflictos o el costo de mantenimiento lo justifica.</li>
+<li>Alquiler de silla, metas y bonos; inventario básico de productos de reventa.</li>
+<li>Doppler/Infisical, réplica de lectura si los reportes la piden, Redis si se necesita <em>rate limiting</em> distribuido.</li>
+</ul>
+<p><strong>Criterio de salida:</strong> 150–300 sucursales pagando, <em>churn</em> mensual &lt; 4 %, al menos 10 cuentas multi-sucursal, margen bruto por sucursal positivo incluido el costo de WhatsApp.</p>
+<h3 id="fase-3-escala-y-latam-6-meses">Fase 3 — Escala y LATAM (6+ meses)</h3>
+<ul>
+<li><strong>Internacionalización:</strong> adaptadores de facturación por país (CFDI en México, DIAN en Colombia, SII en Chile), monedas, pasarelas locales (PIX en Brasil si aplica) y plantillas de WhatsApp por idioma.</li>
+<li>Extraer <strong>Notificaciones</strong> como servicio; cola a BullMQ/SQS si el volumen lo exige; <em>warehouse</em> analítico (ClickHouse o BigQuery) alimentado por el outbox.</li>
+<li>"Silo bajo demanda" para cadenas grandes (BD dedicada), SSO para franquicias y API pública con <em>webhooks</em> para integraciones.</li>
+<li>App nativa del cliente final o perfil en un directorio, <strong>solo</strong> si hay masa crítica para un <em>marketplace</em>.</li>
+<li>Cumplimiento: revisión externa de seguridad (pentest), y alineamiento con la LGPD (Brasil) y la ley de datos personales de cada país antes de entrar.</li>
+</ul>
+<p><strong>Criterio de salida:</strong> operación en ≥ 2 países con P&amp;L positivo por país.</p>
+<hr />
+</section><section class="chapter"><h2 id="13-riesgos-principales">13. Riesgos principales</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Riesgo</th>
+<th style="text-align: center;">Prob.</th>
+<th style="text-align: center;">Impacto</th>
+<th>Mitigación</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>R1</td>
+<td><strong>El barbero de barrio no usa agenda</strong> (domina el walk-in) y el producto no le sirve</td>
+<td style="text-align: center;">Alta</td>
+<td style="text-align: center;">Alto</td>
+<td>Validar antes (§14); la cola de walk-ins y la caja aportan valor incluso sin citas</td>
+</tr>
+<tr>
+<td>R2</td>
+<td><strong>El costo de WhatsApp</strong> se come el margen del plan barato, o Meta reclasifica las plantillas como <em>marketing</em></td>
+<td style="text-align: center;">Media</td>
+<td style="text-align: center;">Alto</td>
+<td>Cuotas por plan, <code>wa.me</code> en el gratis, plantillas estrictamente <em>utility</em>, medición del costo por tenant desde el día 1</td>
+</tr>
+<tr>
+<td>R3</td>
+<td>Bloqueo o baja calidad del número de WhatsApp de la plataforma (un salón con mala práctica afecta a todos)</td>
+<td style="text-align: center;">Media</td>
+<td style="text-align: center;">Alto</td>
+<td>Plantillas fijas no editables en el MVP, opt-in obligatorio, monitoreo del <em>quality rating</em>, migrar a número por salón en la Fase 2</td>
+</tr>
+<tr>
+<td>R4</td>
+<td><strong>Fuga de datos entre tenants</strong> por un error del junior</td>
+<td style="text-align: center;">Baja (con RLS)</td>
+<td style="text-align: center;">Crítico</td>
+<td>RLS FORCE, FKs compuestas, suite de aislamiento en CI, revisión obligatoria de PRs que tocan <code>platform/</code></td>
+</tr>
+<tr>
+<td>R5</td>
+<td>La sincronización offline genera bugs sutiles (ventas duplicadas o perdidas)</td>
+<td style="text-align: center;">Media</td>
+<td style="text-align: center;">Alto</td>
+<td>Ventas <em>append-only</em> idempotentes, tests e2e con red simulada (Playwright <em>offline</em>), métrica de comandos pendientes</td>
+</tr>
+<tr>
+<td>R6</td>
+<td>Disposición a pagar menor a la hipótesis, o cobro mensual difícil sin tarjeta</td>
+<td style="text-align: center;">Alta</td>
+<td style="text-align: center;">Alto</td>
+<td>Yape manual con recordatorio, planes trimestrales con descuento, período de gracia, validar el precio en el piloto</td>
+</tr>
+<tr>
+<td>R7</td>
+<td>Exigencia temprana de boleta electrónica SUNAT por salones RER/MYPE</td>
+<td style="text-align: center;">Media</td>
+<td style="text-align: center;">Medio</td>
+<td>Preguntarlo en la validación; adelantar el adaptador OSE si ≥ 30 % de los pilotos lo necesita</td>
+</tr>
+<tr>
+<td>R8</td>
+<td>Competidor regional o global (Fresha, AgendaPro, Booksy) baja precios en Perú</td>
+<td style="text-align: center;">Media</td>
+<td style="text-align: center;">Medio</td>
+<td>Competir en lo local: WhatsApp, Yape, offline, walk-ins, soporte en español por WhatsApp y precio en soles</td>
+</tr>
+<tr>
+<td>R9</td>
+<td>Incumplimiento de la Ley 29733 (consentimientos, datos sensibles, transferencia internacional)</td>
+<td style="text-align: center;">Media</td>
+<td style="text-align: center;">Alto</td>
+<td>Abogado antes del lanzamiento, consentimiento por finalidad en el modelo, DPA con proveedores</td>
+</tr>
+<tr>
+<td>R10</td>
+<td>Rotación del equipo (bus factor = 1)</td>
+<td style="text-align: center;">Media</td>
+<td style="text-align: center;">Alto</td>
+<td>ADRs, runbooks, <em>pair programming</em> en el núcleo, monolito simple de entender</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+</section><section class="chapter"><h2 id="14-decisiones-a-validar-con-clientes-reales-antes-de-construir">14. Decisiones a validar con clientes reales <strong>antes</strong> de construir</h2>
+<p>Validación de 2 semanas en paralelo con la Fase 0: <strong>15–20 entrevistas en persona</strong> en peluquerías y barberías de 2–3 distritos con perfiles distintos (por ejemplo Surquillo, SJL y Los Olivos), más 5 salones que acepten un piloto gratuito de 2 meses.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Pregunta</th>
+<th>Qué decisión cambia</th>
+<th>Señal para "sí"</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>V1</td>
+<td>¿Qué % de atenciones son con cita y cuántas sin cita? ¿Cómo gestionan hoy la espera?</td>
+<td>Prioridad entre la <strong>cola de walk-ins</strong> y la reserva online</td>
+<td>&gt; 40 % de walk-ins ⇒ la cola entra al MVP como función estrella</td>
+</tr>
+<tr>
+<td>V2</td>
+<td>¿Cuántas ausencias tienen por semana? ¿Hoy recuerdan manualmente por WhatsApp?</td>
+<td>Valor percibido de los recordatorios automáticos y su precio</td>
+<td>≥ 2 ausencias/semana o recordatorios manuales diarios</td>
+</tr>
+<tr>
+<td>V3</td>
+<td>¿Cuánto pagarían al mes? ¿Con qué medio (Yape, tarjeta, efectivo)? ¿Mensual o trimestral?</td>
+<td>Precios, flujo de billing, necesidad de Culqi en el MVP</td>
+<td>Mayoría con Yape ⇒ cobro manual asistido primero</td>
+</tr>
+<tr>
+<td>V4</td>
+<td>¿Cómo pagan a sus estilistas: porcentaje, sueldo fijo, alquiler de silla, mixto?</td>
+<td>Alcance de Comisiones en el MVP</td>
+<td>Si domina el alquiler de silla, sube a la Fase 1</td>
+</tr>
+<tr>
+<td>V5</td>
+<td>¿Emiten boleta o factura? ¿En qué régimen tributario están?</td>
+<td>Prioridad de SUNAT</td>
+<td>≥ 30 % emite electrónicamente ⇒ adelantar a Fase 1.5</td>
+</tr>
+<tr>
+<td>V6</td>
+<td>¿Quién usaría la app: dueño, recepcionista o estilista? ¿Desde qué dispositivo? ¿Tienen datos móviles o wifi estable?</td>
+<td>Diseño mobile-first, nivel de inversión en offline</td>
+<td>Si la caja es un celular con datos prepago ⇒ el offline es crítico</td>
+</tr>
+<tr>
+<td>V7</td>
+<td>¿Sus clientes reservarían por un enlace o prefieren escribir por WhatsApp?</td>
+<td>Inversión en la página pública vs. un bot o respuestas rápidas</td>
+<td>Que los dueños compartan el enlace en el piloto y lleguen reservas reales</td>
+</tr>
+<tr>
+<td>V8</td>
+<td>¿Guardan datos de salud de clientas (alergias a tintes)? ¿Fotos del antes y después?</td>
+<td>Alcance del cifrado de notas sensibles y del flujo de consentimiento de fotos</td>
+<td>Si es común (salones de color), se mantiene en el MVP</td>
+</tr>
+<tr>
+<td>V9</td>
+<td>¿Tienen más de un local o planean abrirlo?</td>
+<td>Cuándo hacer la UI multi-sucursal</td>
+<td>—</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Regla de decisión:</strong> si V1 y V6 contradicen las suposiciones S2 y S1, se re-prioriza la Fase 1 <strong>antes</strong> de escribir el módulo de Agenda. La arquitectura no cambia; cambia el orden del <em>backlog</em>.</p>
+<hr />
+</section><section class="chapter"><h2 id="fuentes-consultadas-octubre-2026">Fuentes consultadas (octubre 2026)</h2>
+<ul>
+<li>Precios y modelo de Fresha: <a href="https://pabau.com/blog/fresha-pricing/" target="_blank" rel="noopener">Pabau — Fresha pricing</a>, <a href="https://www.costbench.com/software/salon-spa/fresha/" target="_blank" rel="noopener">CostBench — Fresha</a>, <a href="https://schedulingkit.com/pricing-guides/fresha-pricing" target="_blank" rel="noopener">SchedulingKit — Fresha pricing</a>, <a href="https://toolradar.com/tools/fresha/pricing" target="_blank" rel="noopener">Toolradar — Fresha pricing</a></li>
+<li>Precios de WhatsApp Business Platform: <a href="https://developers.facebook.com/docs/whatsapp/pricing" target="_blank" rel="noopener">Meta — Pricing on the WhatsApp Business Platform</a>, <a href="https://developers.facebook.com/documentation/business-messaging/whatsapp/pricing" target="_blank" rel="noopener">Meta — documentación de precios</a>, <a href="https://zernio.com/blog/whatsapp-business-api-pricing" target="_blank" rel="noopener">Zernio — WhatsApp Business API pricing</a></li>
+<li>Facturación electrónica y Nubefact: <a href="https://apps.odoo.com/apps/modules/18.0/l10n_pe_edi_odoofact" target="_blank" rel="noopener">Odoo — l10n_pe_edi_odoofact</a>, <a href="https://kom.pe/como-emitir-boletas-y-facturas-sunat-desde-woocommerce/" target="_blank" rel="noopener">kom.pe — boletas y facturas SUNAT desde WooCommerce</a>, <a href="https://es.scribd.com/document/354210315/API-Online" target="_blank" rel="noopener">Scribd — API Nubefact</a></li>
+<li>Pasarelas y Yape en Perú: <a href="https://kom.pe/pasarelas-pago-tienda-virtual-peru-2026/" target="_blank" rel="noopener">kom.pe — pasarelas de pago Perú 2026</a>, <a href="https://kom.pe/como-aceptar-yape-y-plin-en-tu-tienda-woocommerce/" target="_blank" rel="noopener">kom.pe — Yape y Plin en WooCommerce</a>, <a href="https://www.guiadesoftware.com/blog/mejor-pasarela-pago-peru" target="_blank" rel="noopener">Guía de Software — mejor pasarela de pago Perú</a></li>
+</ul>
+<p><em>Pendientes de verificar en fuente oficial antes de decidir precios: tarifa de WhatsApp para Perú (rate card de Meta), tarifas vigentes de Culqi y Nubefact, disponibilidad de Mercado Pago Suscripciones en Perú y plazos del reglamento de la Ley 29733.</em></p></section>
+  </main>
+
+  <footer>Ley 29733 y tarifas de terceros: verificar en fuente oficial antes de decidir. Este documento no es asesoría legal.</footer>
+</div>
+
+<script>
+(function () {
+  var links = Array.prototype.slice.call(document.querySelectorAll('nav.toc a'));
+  var byId = {};
+  links.forEach(function (a) { byId[decodeURIComponent(a.getAttribute('href').slice(1))] = a; });
+  if (!('IntersectionObserver' in window)) return;
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (e.isIntersecting && byId[e.target.id]) {
+        links.forEach(function (l) { l.classList.remove('active'); });
+        byId[e.target.id].classList.add('active');
+      }
+    });
+  }, { rootMargin: '0px 0px -75% 0px' });
+  document.querySelectorAll('main h2[id]').forEach(function (h) { io.observe(h); });
+  document.querySelectorAll('details.toc-mobile a').forEach(function (a) {
+    a.addEventListener('click', function () { a.closest('details').open = false; });
+  });
+})();
+</script>
